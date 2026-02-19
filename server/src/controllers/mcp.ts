@@ -1,4 +1,5 @@
 import type { Core } from '@strapi/strapi';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
@@ -10,11 +11,22 @@ const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 // Maximum concurrent MCP sessions
 const MAX_SESSIONS = 100;
 
+interface MCPSession {
+  server: McpServer;
+  transport: StreamableHTTPServerTransport;
+  createdAt: number;
+}
+
+interface PluginWithMCP {
+  createMcpServer?: () => McpServer;
+  mcpSessions: Map<string, MCPSession>;
+}
+
 function isSessionExpired(session: { createdAt: number }): boolean {
   return Date.now() - session.createdAt > SESSION_TIMEOUT_MS;
 }
 
-function cleanupExpiredSessions(plugin: any, strapi: Core.Strapi): void {
+function cleanupExpiredSessions(plugin: PluginWithMCP, strapi: Core.Strapi): void {
   let cleaned = 0;
   for (const [sessionId, session] of plugin.mcpSessions.entries()) {
     if (isSessionExpired(session)) {
@@ -38,7 +50,7 @@ const mcpController = ({ strapi }: { strapi: Core.Strapi }) => ({
    * Creates a new server+transport per session for proper isolation.
    */
   async handle(ctx: any) {
-    const plugin = strapi.plugin(PLUGIN_ID) as any;
+    const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginWithMCP;
 
     if (!plugin.createMcpServer) {
       ctx.status = 503;
@@ -49,10 +61,9 @@ const mcpController = ({ strapi }: { strapi: Core.Strapi }) => ({
       return;
     }
 
-    // Periodically clean up expired sessions
-    if (Math.random() < 0.01) {
-      cleanupExpiredSessions(plugin, strapi);
-    }
+    // Clean up expired sessions on every request
+    // This is lightweight as it only iterates and checks timestamps
+    cleanupExpiredSessions(plugin, strapi);
 
     try {
       const requestedSessionId = ctx.request.headers['mcp-session-id'];
@@ -134,7 +145,9 @@ const mcpController = ({ strapi }: { strapi: Core.Strapi }) => ({
         } catch {
           // Ignore close errors
         }
-        plugin.mcpSessions.delete(currentSessionId);
+        if (currentSessionId) {
+          plugin.mcpSessions.delete(currentSessionId);
+        }
 
         if (!ctx.res.headersSent) {
           ctx.status = 400;

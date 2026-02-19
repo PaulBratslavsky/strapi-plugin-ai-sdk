@@ -7,7 +7,7 @@ const designSystem = require("@strapi/design-system");
 const react = require("react");
 const icons = require("@strapi/icons");
 const styled = require("styled-components");
-const index$2 = require("./index-BvoCw4O8.js");
+const index$2 = require("./index-DN9aKZYu.js");
 const THREE = require("three");
 const OrbitControls_js = require("three/examples/jsm/controls/OrbitControls.js");
 const GLTFLoader_js = require("three/examples/jsm/loaders/GLTFLoader.js");
@@ -9800,7 +9800,7 @@ function useChat(options) {
             }));
           }
         });
-        if (!result && !messages.length) {
+        if (!result) {
           updateMessage(setMessages, assistantId, (message) => ({ ...message, content: message.content || "No response received." }));
         }
       } catch (err) {
@@ -9811,7 +9811,7 @@ function useChat(options) {
         options?.onStreamEnd?.();
       }
     },
-    [isLoading, messages]
+    [isLoading, messages, options]
   );
   const clearMessages = react.useCallback(() => {
     setMessages([]);

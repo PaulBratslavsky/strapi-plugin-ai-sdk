@@ -33,7 +33,8 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
         stream.write('data: [DONE]\n\n');
       } catch (error) {
         strapi.log.error('AI SDK stream error:', error);
-        writeSSE(stream, { error: 'Stream error' });
+        const errorMessage = error instanceof Error ? error.message : 'Stream error occurred';
+        writeSSE(stream, { error: errorMessage });
       } finally {
         stream.end();
       }

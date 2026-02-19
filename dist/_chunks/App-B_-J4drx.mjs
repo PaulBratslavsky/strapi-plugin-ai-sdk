@@ -5,7 +5,7 @@ import { Typography, Box, TextInput, Button, Main } from "@strapi/design-system"
 import { useState, useCallback, createContext, useContext, useRef, useEffect } from "react";
 import { Sparkle } from "@strapi/icons";
 import styled from "styled-components";
-import { P as PLUGIN_ID } from "./index-qIoVb5WD.mjs";
+import { P as PLUGIN_ID } from "./index-CK2l0_z_.mjs";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -9778,7 +9778,7 @@ function useChat(options) {
             }));
           }
         });
-        if (!result && !messages.length) {
+        if (!result) {
           updateMessage(setMessages, assistantId, (message) => ({ ...message, content: message.content || "No response received." }));
         }
       } catch (err) {
@@ -9789,7 +9789,7 @@ function useChat(options) {
         options?.onStreamEnd?.();
       }
     },
-    [isLoading, messages]
+    [isLoading, messages, options]
   );
   const clearMessages = useCallback(() => {
     setMessages([]);

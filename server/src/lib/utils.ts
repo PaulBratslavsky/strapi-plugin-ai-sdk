@@ -28,6 +28,11 @@ export function validateBody(ctx: Context): { prompt: string; system?: string } 
     return null;
   }
 
+  if (system !== undefined && typeof system !== 'string') {
+    ctx.badRequest('system must be a string if provided');
+    return null;
+  }
+
   return { prompt, system };
 }
 
@@ -39,6 +44,11 @@ export function validateChatBody(ctx: Context): { messages: UIMessage[]; system?
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     ctx.badRequest('messages is required and must be a non-empty array');
+    return null;
+  }
+
+  if (system !== undefined && typeof system !== 'string') {
+    ctx.badRequest('system must be a string if provided');
     return null;
   }
 

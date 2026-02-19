@@ -1,10 +1,23 @@
 import type { Core } from '@strapi/strapi';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
 const PLUGIN_ID = 'ai-sdk';
 
+interface MCPSession {
+  server: McpServer;
+  transport: StreamableHTTPServerTransport;
+  createdAt: number;
+}
+
+interface PluginWithMCP {
+  createMcpServer?: (() => McpServer) | null;
+  mcpSessions?: Map<string, MCPSession> | null;
+}
+
 const destroy = async ({ strapi }: { strapi: Core.Strapi }) => {
   try {
-    const plugin = strapi.plugin(PLUGIN_ID) as any;
+    const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginWithMCP;
 
     // Close all active MCP sessions
     if (plugin.mcpSessions) {

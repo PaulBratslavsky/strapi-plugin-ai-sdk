@@ -111,7 +111,7 @@ export function useChat(options?: UseChatOptions) {
           },
         });
 
-        if (!result && !messages.length) {
+        if (!result) {
           updateMessage(setMessages, assistantId, (message) => ({ ...message, content: message.content || 'No response received.' }));
         }
       } catch (err) {
@@ -122,7 +122,7 @@ export function useChat(options?: UseChatOptions) {
         options?.onStreamEnd?.();
       }
     },
-    [isLoading, messages]
+    [isLoading, messages, options]
   );
 
   const clearMessages = useCallback(() => {

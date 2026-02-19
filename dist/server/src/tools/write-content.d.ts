@@ -5,4 +5,7 @@ export declare function createWriteContentTool(strapi: Core.Strapi): import("ai"
     data: Record<string, unknown>;
     documentId?: string;
     status?: "draft" | "published";
-}, import("../tool-logic").WriteContentResult>;
+}, {
+    document: any;
+    action: "create" | "update";
+}>;

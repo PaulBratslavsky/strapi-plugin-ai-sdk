@@ -16,7 +16,10 @@ export declare function createTools(strapi: Core.Strapi): {
         data: Record<string, unknown>;
         documentId?: string;
         status?: "draft" | "published";
-    }, import("../tool-logic").WriteContentResult>;
+    }, {
+        document: any;
+        action: "create" | "update";
+    }>;
     triggerAnimation: import("ai").Tool<{
         animation: "idle" | "speak" | "wave" | "nod" | "think" | "celebrate" | "shake" | "spin";
     }, {
