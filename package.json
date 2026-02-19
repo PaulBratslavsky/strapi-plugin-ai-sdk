@@ -1,0 +1,78 @@
+{
+  "version": "0.0.0",
+  "keywords": [],
+  "type": "commonjs",
+  "exports": {
+    "./package.json": "./package.json",
+    "./strapi-admin": {
+      "types": "./dist/admin/src/index.d.ts",
+      "source": "./admin/src/index.ts",
+      "import": "./dist/admin/index.mjs",
+      "require": "./dist/admin/index.js",
+      "default": "./dist/admin/index.js"
+    },
+    "./strapi-server": {
+      "types": "./dist/server/src/index.d.ts",
+      "source": "./server/src/index.ts",
+      "import": "./dist/server/index.mjs",
+      "require": "./dist/server/index.js",
+      "default": "./dist/server/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "strapi-plugin build",
+    "watch": "strapi-plugin watch",
+    "watch:link": "strapi-plugin watch:link",
+    "verify": "strapi-plugin verify",
+    "test:ts:front": "run -T tsc -p admin/tsconfig.json",
+    "test:ts:back": "run -T tsc -p server/tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.15",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@strapi/design-system": "^2.0.0-rc.30",
+    "@strapi/icons": "^2.0.0-rc.30",
+    "ai": "^6.0.39",
+    "react-intl": "^8.1.0",
+    "three": "^0.175.0",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@strapi/sdk-plugin": "^5.4.0",
+    "@strapi/strapi": "^5.33.3",
+    "@strapi/typescript-utils": "^5.33.3",
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.182.0",
+    "prettier": "^3.8.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.3.8",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@strapi/strapi": "^5.33.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.3.8"
+  },
+  "strapi": {
+    "kind": "plugin",
+    "name": "ai-sdk",
+    "displayName": "AI SDK",
+    "description": "Example project showcasing AI SDK from Vercel"
+  },
+  "name": "ai-sdk",
+  "description": "Example project showcasing AI SDK from Vercel",
+  "license": "MIT",
+  "author": "Paul Bratslavsky <paul.bratslavsky@strapi.io>",
+  "bundleDependencies": [
+    "@modelcontextprotocol/sdk",
+    "zod"
+  ]
+}
