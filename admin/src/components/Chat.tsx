@@ -188,7 +188,7 @@ const ToolCallContent = styled.pre`
 
 const HIDDEN_TOOLS = new Set(['triggerAnimation']);
 
-function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
+function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -204,9 +204,9 @@ function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
       </ToolCallHeader>
       {expanded && (
         <ToolCallContent>
-          {toolCall.output !== undefined
-            ? JSON.stringify(toolCall.output, null, 2)
-            : 'Waiting for result...'}
+          {toolCall.output === undefined
+            ? 'Waiting for result...'
+            : JSON.stringify(toolCall.output, null, 2)}
         </ToolCallContent>
       )}
     </ToolCallBox>
@@ -226,8 +226,10 @@ export function Chat() {
   });
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!isLoading) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -262,16 +264,14 @@ export function Chat() {
                 <MessageRole $isUser={message.role === 'user'}>
                   {message.role === 'user' ? 'You' : 'Assistant'}
                 </MessageRole>
-                {message.role === 'assistant' ? (
-                  message.content ? (
-                    <MarkdownBody $isUser={false}>
-                      <Markdown>{message.content}</Markdown>
-                    </MarkdownBody>
-                  ) : isLoading ? (
-                    <TypingDots><span /><span /><span /></TypingDots>
-                  ) : null
-                ) : (
-                  message.content
+                {message.role === 'user' && message.content}
+                {message.role === 'assistant' && message.content && (
+                  <MarkdownBody $isUser={false}>
+                    <Markdown>{message.content}</Markdown>
+                  </MarkdownBody>
+                )}
+                {message.role === 'assistant' && !message.content && isLoading && (
+                  <TypingDots><span /><span /><span /></TypingDots>
                 )}
                 {message.toolCalls
                   ?.filter((tc) => !HIDDEN_TOOLS.has(tc.toolName))

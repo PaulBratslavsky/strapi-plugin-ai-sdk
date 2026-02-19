@@ -2,6 +2,7 @@ import type { Core } from '@strapi/strapi';
 import type { Context } from 'koa';
 import { Readable } from 'node:stream';
 import { getService, validateBody, validateChatBody, createSSEStream, writeSSE } from '../lib/utils';
+import type { PluginConfig } from '../lib/types';
 
 const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
   async ask(ctx: Context) {
@@ -25,20 +26,27 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     const textStream = await service.askStream(body.prompt, { system: body.system });
     const stream = createSSEStream(ctx);
 
-    void (async () => {
+    (async () => {
       try {
         for await (const chunk of textStream) {
           writeSSE(stream, { text: chunk });
         }
         stream.write('data: [DONE]\n\n');
       } catch (error) {
-        strapi.log.error('AI SDK stream error:', error);
+        if (error instanceof Error && error.name === 'AbortError') {
+          strapi.log.debug('AI SDK stream aborted by client');
+        } else {
+          strapi.log.error('AI SDK stream error:', error);
+        }
         const errorMessage = error instanceof Error ? error.message : 'Stream error occurred';
         writeSSE(stream, { error: errorMessage });
       } finally {
         stream.end();
       }
-    })();
+    })().catch((error) => {
+      strapi.log.error('Uncaught stream error:', error);
+      stream.end();
+    });
   },
 
   /**
@@ -52,8 +60,8 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     const service = getService(strapi, ctx);
     if (!service) return;
 
-    const config = strapi.config.get('plugin::ai-sdk') as { systemPrompt?: string };
-    const system = body.system || config.systemPrompt || undefined;
+    const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
+    const system = body.system || config?.systemPrompt || undefined;
 
     const result = await service.chat(body.messages, { system });
 

@@ -1,5 +1,6 @@
 import type { ModelMessage, ToolSet, StopCondition } from 'ai';
 
+// StopCondition uses a generic that varies by tool implementation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyStopCondition = StopCondition<any>;
 

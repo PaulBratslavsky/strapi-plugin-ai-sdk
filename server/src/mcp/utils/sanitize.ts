@@ -23,8 +23,9 @@ export async function sanitizeOutput(
     strapi.log.error('[ai-sdk:mcp] Output sanitization failed', {
       uid,
       error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
     });
-    throw new Error(`Failed to sanitize output for "${uid}". Data not returned for security.`);
+    throw error;
   }
 }
 
@@ -50,7 +51,8 @@ export async function sanitizeInput(
     strapi.log.error('[ai-sdk:mcp] Input sanitization failed', {
       uid,
       error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
     });
-    throw new Error(`Failed to sanitize input for "${uid}". Write operation aborted for security.`);
+    throw error;
   }
 }

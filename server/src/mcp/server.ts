@@ -1,10 +1,10 @@
 import type { Core } from '@strapi/strapi';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { listContentTypes } from '../tool-logic';
-import { searchContent } from '../tool-logic';
-import { writeContent } from '../tool-logic';
+import { listContentTypes, searchContent, writeContent } from '../tool-logic';
 import { sanitizeOutput, sanitizeInput } from './utils/sanitize';
+
+const MAX_RESULTS_PER_PAGE = 50;
 
 /**
  * Create an MCP server instance configured with Strapi tools.
@@ -74,7 +74,7 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
           .optional()
           .describe('Full-text search query string (searches across all searchable text fields)'),
         filters: z
-          .record(z.string(), z.any())
+          .record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null(), z.record(z.string(), z.unknown())]))
           .optional()
           .describe('Strapi filter object, e.g. { username: { $containsi: "john" } }'),
         fields: z
@@ -87,10 +87,10 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
           .number()
           .int()
           .min(1)
-          .max(50)
+          .max(MAX_RESULTS_PER_PAGE)
           .optional()
           .default(10)
-          .describe('Results per page (max 50)'),
+          .describe(`Results per page (max ${MAX_RESULTS_PER_PAGE})`),
       },
     },
     async (args) => {
@@ -135,7 +135,14 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
           .optional()
           .describe('Required for update - the document ID to update'),
         data: z
-          .record(z.string(), z.any())
+          .record(z.string(), z.union([
+            z.string(),
+            z.number(),
+            z.boolean(),
+            z.null(),
+            z.array(z.unknown()),
+            z.record(z.string(), z.unknown()),
+          ]))
           .describe('The field values to set. Must match the content type schema.'),
         status: z
           .enum(['draft', 'published'])

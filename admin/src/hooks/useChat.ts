@@ -19,6 +19,10 @@ export interface Message {
 
 type SetMessages = React.Dispatch<React.SetStateAction<Message[]>>;
 
+function generateId(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+}
+
 function toUIMessages(messages: Message[]) {
   return messages.map((message) => ({
     id: message.id,
@@ -53,6 +57,22 @@ function removeMessage(setMessages: SetMessages, id: string) {
   setMessages((prev) => prev.filter((message) => message.id !== id));
 }
 
+function addToolCall(setMessages: SetMessages, assistantId: string, toolCallId: string, toolName: string, input: unknown) {
+  updateMessage(setMessages, assistantId, (message) => ({
+    ...message,
+    toolCalls: [...(message.toolCalls ?? []), { toolCallId, toolName, input }],
+  }));
+}
+
+function updateToolOutput(setMessages: SetMessages, assistantId: string, toolCallId: string, output: unknown) {
+  updateMessage(setMessages, assistantId, (message) => ({
+    ...message,
+    toolCalls: message.toolCalls?.map((tc) =>
+      tc.toolCallId === toolCallId ? { ...tc, output } : tc
+    ),
+  }));
+}
+
 export interface UseChatOptions {
   onAnimationTrigger?: (animation: string) => void;
   onStreamStart?: () => void;
@@ -69,8 +89,8 @@ export function useChat(options?: UseChatOptions) {
       const trimmed = text.trim();
       if (!trimmed || isLoading) return;
 
-      const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: trimmed };
-      const assistantId = crypto.randomUUID();
+      const userMessage: Message = { id: generateId(), role: 'user', content: trimmed };
+      const assistantId = generateId();
 
       setMessages((prev) => [...prev, userMessage, { id: assistantId, role: 'assistant', content: '' }]);
       setIsLoading(true);
@@ -89,25 +109,13 @@ export function useChat(options?: UseChatOptions) {
             updateMessage(setMessages, assistantId, (message) => ({ ...message, content }));
           },
           onToolInput: (toolCallId, toolName, input) => {
-            // Fire animation trigger instantly on tool-input
             if (toolName === 'triggerAnimation' && input && typeof input === 'object' && 'animation' in input) {
               options?.onAnimationTrigger?.(String((input as { animation: string }).animation));
             }
-            updateMessage(setMessages, assistantId, (message) => ({
-              ...message,
-              toolCalls: [
-                ...(message.toolCalls ?? []),
-                { toolCallId, toolName, input },
-              ],
-            }));
+            addToolCall(setMessages, assistantId, toolCallId, toolName, input);
           },
           onToolOutput: (toolCallId, output) => {
-            updateMessage(setMessages, assistantId, (message) => ({
-              ...message,
-              toolCalls: message.toolCalls?.map((toolCall) =>
-                toolCall.toolCallId === toolCallId ? { ...toolCall, output } : toolCall
-              ),
-            }));
+            updateToolOutput(setMessages, assistantId, toolCallId, output);
           },
         });
 

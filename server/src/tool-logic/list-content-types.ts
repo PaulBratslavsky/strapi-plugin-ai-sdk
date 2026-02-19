@@ -28,7 +28,19 @@ export interface ListContentTypesResult {
   components: ComponentSummary[];
 }
 
-const INTERNAL_FIELDS = [
+interface StrapiContentType {
+  kind?: string;
+  info?: { displayName?: string };
+  attributes?: Record<string, Record<string, unknown>>;
+}
+
+interface StrapiComponent {
+  category?: string;
+  info?: { displayName?: string };
+  attributes?: Record<string, unknown>;
+}
+
+const INTERNAL_FIELDS = new Set([
   'createdAt',
   'updatedAt',
   'publishedAt',
@@ -36,88 +48,96 @@ const INTERNAL_FIELDS = [
   'updatedBy',
   'locale',
   'localizations',
-];
+]);
+
+function isApiContentType(uid: string): boolean {
+  return !uid.startsWith('admin::') && !uid.startsWith('strapi::');
+}
+
+function extractRelation(
+  attrName: string,
+  attr: Record<string, unknown>,
+  contentTypes: object
+): RelationSummary | null {
+  if (attr.type !== 'relation' || !attr.target) return null;
+
+  const target = attr.target as string;
+  const relation = attr.relation as string;
+  const targetCt = (contentTypes as Record<string, StrapiContentType>)[target];
+  return {
+    field: attrName,
+    type: relation,
+    target,
+    targetDisplayName: targetCt?.info?.displayName || target,
+  };
+}
+
+function collectComponents(attr: Record<string, unknown>): string[] {
+  if (attr.type === 'component' && attr.component) {
+    return [attr.component as string];
+  }
+  if (attr.type === 'dynamiczone' && Array.isArray(attr.components)) {
+    return attr.components as string[];
+  }
+  return [];
+}
+
+function parseContentType(
+  uid: string,
+  contentType: unknown,
+  allContentTypes: object
+): ContentTypeSummary {
+  const ct = contentType as StrapiContentType;
+  const fields: string[] = [];
+  const relations: RelationSummary[] = [];
+  const usedComponents = new Set<string>();
+
+  for (const [attrName, attrDef] of Object.entries(ct.attributes || {})) {
+    if (INTERNAL_FIELDS.has(attrName)) continue;
+
+    fields.push(attrName);
+
+    const relation = extractRelation(attrName, attrDef, allContentTypes);
+    if (relation) relations.push(relation);
+
+    for (const comp of collectComponents(attrDef)) {
+      usedComponents.add(comp);
+    }
+  }
+
+  return {
+    uid,
+    kind: (ct.kind || 'collectionType') as 'collectionType' | 'singleType',
+    displayName: ct.info?.displayName || uid,
+    fields,
+    relations,
+    components: [...usedComponents],
+  };
+}
+
+function parseComponent(uid: string, component: unknown): ComponentSummary {
+  const comp = component as StrapiComponent;
+  return {
+    uid,
+    category: comp.category || 'default',
+    displayName: comp.info?.displayName || uid,
+    fieldCount: Object.keys(comp.attributes || {}).length,
+  };
+}
 
 /**
  * Core logic for listing content types and components.
  * Shared between AI SDK tool and MCP tool.
  */
 export async function listContentTypes(strapi: Core.Strapi): Promise<ListContentTypesResult> {
-  const contentTypes = strapi.contentTypes;
-  const components = strapi.components;
+  const contentTypes = Object.entries(strapi.contentTypes)
+    .filter(([uid]) => isApiContentType(uid))
+    .map(([uid, ct]) => parseContentType(uid, ct, strapi.contentTypes))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-  const apiContentTypes: ContentTypeSummary[] = [];
+  const components = Object.entries(strapi.components)
+    .map(([uid, comp]) => parseComponent(uid, comp))
+    .sort((a, b) => a.category.localeCompare(b.category) || a.displayName.localeCompare(b.displayName));
 
-  for (const [uid, contentType] of Object.entries(contentTypes)) {
-    if (uid.startsWith('admin::') || uid.startsWith('strapi::')) continue;
-
-    const ct = contentType as any;
-    const kind = ct.kind || 'collectionType';
-    const fields: string[] = [];
-    const relations: RelationSummary[] = [];
-    const usedComponents: string[] = [];
-
-    for (const [attrName, attrDef] of Object.entries(ct.attributes || {})) {
-      if (INTERNAL_FIELDS.includes(attrName)) continue;
-
-      const attr = attrDef as any;
-      fields.push(attrName);
-
-      if (attr.type === 'relation' && attr.target) {
-        const targetCt = contentTypes[attr.target as keyof typeof contentTypes] as any;
-        relations.push({
-          field: attrName,
-          type: attr.relation,
-          target: attr.target,
-          targetDisplayName: targetCt?.info?.displayName || attr.target,
-        });
-      }
-
-      if (attr.type === 'component' && attr.component) {
-        if (!usedComponents.includes(attr.component)) {
-          usedComponents.push(attr.component);
-        }
-      }
-
-      if (attr.type === 'dynamiczone') {
-        for (const comp of attr.components || []) {
-          if (!usedComponents.includes(comp)) {
-            usedComponents.push(comp);
-          }
-        }
-      }
-    }
-
-    apiContentTypes.push({
-      uid,
-      kind: kind as 'collectionType' | 'singleType',
-      displayName: ct.info?.displayName || uid,
-      fields,
-      relations,
-      components: usedComponents,
-    });
-  }
-
-  apiContentTypes.sort((a, b) => a.displayName.localeCompare(b.displayName));
-
-  const componentSummaries: ComponentSummary[] = [];
-  for (const [uid, component] of Object.entries(components)) {
-    const comp = component as any;
-    componentSummaries.push({
-      uid,
-      category: comp.category || 'default',
-      displayName: comp.info?.displayName || uid,
-      fieldCount: Object.keys(comp.attributes || {}).length,
-    });
-  }
-
-  componentSummaries.sort((a, b) => {
-    const cat = a.category.localeCompare(b.category);
-    return cat !== 0 ? cat : a.displayName.localeCompare(b.displayName);
-  });
-
-  return {
-    contentTypes: apiContentTypes,
-    components: componentSummaries,
-  };
+  return { contentTypes, components };
 }
