@@ -4,6 +4,8 @@ import { Sparkle } from '@strapi/icons';
 import styled from 'styled-components';
 import Markdown from 'react-markdown';
 import { useChat, type ToolCall } from '../hooks/useChat';
+import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useTextReveal } from '../hooks/useTextReveal';
 import { useAvatarAnimation } from '../context/AvatarAnimationContext';
 import { AvatarPanel } from './AvatarPanel';
 import waifuAvatar from './waifu-avatar.png';
@@ -217,25 +219,44 @@ function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) {
 
 export function Chat() {
   const [input, setInput] = useState('');
+  const [awaitingAudio, setAwaitingAudio] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fullTextRef = useRef('');
   const { trigger, clearAnimation } = useAvatarAnimation();
+  const { visibleText, startReveal, reset: resetReveal } = useTextReveal();
+  const { speak } = useAudioPlayer({
+    onPlayStart: (duration) => {
+      trigger('speak');
+      startReveal(fullTextRef.current, duration);
+      setAwaitingAudio(false);
+    },
+    onPlayEnded: () => clearAnimation(),
+  });
   const { messages, sendMessage, isLoading, error } = useChat({
     onAnimationTrigger: trigger,
-    onStreamStart: () => trigger('speak'),
-    onStreamEnd: () => clearAnimation(),
+    onStreamEnd: (fullText) => {
+      fullTextRef.current = fullText;
+      if (!fullText) {
+        setAwaitingAudio(false);
+        clearAnimation();
+      } else {
+        speak(fullText);
+      }
+    },
   });
-
-  useEffect(() => {
-    if (!isLoading) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isLoading]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
+    fullTextRef.current = '';
+    resetReveal();
+    setAwaitingAudio(true);
     sendMessage(input);
     setInput('');
   };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, visibleText]);
 
   return (
     <ChatLayout>
@@ -255,7 +276,18 @@ export function Chat() {
             </EmptyState>
           )}
 
-          {messages.map((message) => (
+          {messages.map((message, index) => {
+            const isLatestAssistant =
+              message.role === 'assistant' &&
+              index === messages.length - 1;
+            // For the latest assistant message during audio reveal, show visibleText
+            // For all other messages, show full content
+            const displayContent =
+              isLatestAssistant && (awaitingAudio || visibleText)
+                ? visibleText
+                : message.content;
+
+            return (
             <MessageRow key={message.id} $isUser={message.role === 'user'}>
               {message.role === 'assistant' && (
                 <Avatar src={waifuAvatar} alt="Assistant" />
@@ -265,12 +297,12 @@ export function Chat() {
                   {message.role === 'user' ? 'You' : 'Assistant'}
                 </MessageRole>
                 {message.role === 'user' && message.content}
-                {message.role === 'assistant' && message.content && (
+                {message.role === 'assistant' && displayContent && (
                   <MarkdownBody $isUser={false}>
-                    <Markdown>{message.content}</Markdown>
+                    <Markdown>{displayContent}</Markdown>
                   </MarkdownBody>
                 )}
-                {message.role === 'assistant' && !message.content && isLoading && (
+                {message.role === 'assistant' && !displayContent && (isLoading || awaitingAudio) && (
                   <TypingDots><span /><span /><span /></TypingDots>
                 )}
                 {message.toolCalls
@@ -280,7 +312,8 @@ export function Chat() {
                   ))}
               </MessageBubble>
             </MessageRow>
-          ))}
+            );
+          })}
 
           <div ref={messagesEndRef} />
         </MessagesArea>

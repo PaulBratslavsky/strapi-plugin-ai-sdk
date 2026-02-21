@@ -9,5 +9,13 @@ export default {
         policies: [],
       },
     },
+    {
+      method: 'POST',
+      path: '/tts',
+      handler: 'controller.tts',
+      config: {
+        policies: [],
+      },
+    },
   ],
 };

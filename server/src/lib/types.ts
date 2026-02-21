@@ -22,6 +22,8 @@ export interface PluginConfig {
   chatModel?: ChatModelName;
   baseURL?: string;
   systemPrompt?: string;
+  typecastApiKey?: string;
+  typecastActorId?: string;
 }
 
 export interface GenerateOptions {

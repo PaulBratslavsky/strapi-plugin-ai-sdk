@@ -76,7 +76,7 @@ function updateToolOutput(setMessages: SetMessages, assistantId: string, toolCal
 export interface UseChatOptions {
   onAnimationTrigger?: (animation: string) => void;
   onStreamStart?: () => void;
-  onStreamEnd?: () => void;
+  onStreamEnd?: (fullText: string) => void;
 }
 
 export function useChat(options?: UseChatOptions) {
@@ -114,10 +114,14 @@ export function useChat(options?: UseChatOptions) {
             }
             addToolCall(setMessages, assistantId, toolCallId, toolName, input);
           },
-          onToolOutput: (toolCallId, output) => {
+          onToolOutput: (toolCallId, _toolName, output) => {
             updateToolOutput(setMessages, assistantId, toolCallId, output);
           },
         });
+
+        if (result) {
+          options?.onStreamEnd?.(result);
+        }
 
         if (!result) {
           updateMessage(setMessages, assistantId, (message) => ({ ...message, content: message.content || 'No response received.' }));
@@ -127,7 +131,6 @@ export function useChat(options?: UseChatOptions) {
         removeMessage(setMessages, assistantId);
       } finally {
         setIsLoading(false);
-        options?.onStreamEnd?.();
       }
     },
     [isLoading, messages, options]

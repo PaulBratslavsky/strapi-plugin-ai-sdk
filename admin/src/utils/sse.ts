@@ -40,7 +40,7 @@ function parseSSELine(line: string): SSEEvent | null {
 export interface SSECallbacks {
   onTextDelta: (accumulated: string) => void;
   onToolInput?: (toolCallId: string, toolName: string, input: unknown) => void;
-  onToolOutput?: (toolCallId: string, output: unknown) => void;
+  onToolOutput?: (toolCallId: string, toolName: string, output: unknown) => void;
 }
 
 export async function readSSEStream(
@@ -55,6 +55,7 @@ export async function readSSEStream(
   const decoder = new TextDecoder();
   let buffer = '';
   let accumulated = '';
+  const toolNameMap = new Map<string, string>();
 
   while (true) {
     const { done, value } = await reader.read();
@@ -74,11 +75,14 @@ export async function readSSEStream(
           callbacks.onTextDelta(accumulated);
           break;
         case 'tool-input-available':
+          toolNameMap.set(event.toolCallId, event.toolName);
           callbacks.onToolInput?.(event.toolCallId, event.toolName, event.input);
           break;
-        case 'tool-output-available':
-          callbacks.onToolOutput?.(event.toolCallId, event.output);
+        case 'tool-output-available': {
+          const resolvedName = toolNameMap.get(event.toolCallId) ?? '';
+          callbacks.onToolOutput?.(event.toolCallId, resolvedName, event.output);
           break;
+        }
       }
     }
   }

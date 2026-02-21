@@ -3,6 +3,9 @@ import type { Context } from 'koa';
 import { Readable } from 'node:stream';
 import { getService, validateBody, validateChatBody, createSSEStream, writeSSE } from '../lib/utils';
 import type { PluginConfig } from '../lib/types';
+import type { TTSProvider } from '../lib/tts/types';
+
+const PLUGIN_ID = 'ai-sdk';
 
 const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
   async ask(ctx: Context) {
@@ -78,6 +81,33 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
 
     // Convert Web ReadableStream to Node.js Readable stream for Koa
     ctx.body = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
+  },
+
+  async tts(ctx: Context) {
+    const { text } = ctx.request.body as { text?: string };
+    if (!text || typeof text !== 'string') {
+      ctx.status = 400;
+      ctx.body = { error: 'Missing "text" field' };
+      return;
+    }
+
+    const plugin = strapi.plugin(PLUGIN_ID) as unknown as { ttsProvider?: TTSProvider };
+    if (!plugin.ttsProvider) {
+      ctx.status = 501;
+      ctx.body = { error: 'TTS not configured' };
+      return;
+    }
+
+    try {
+      const buffer = await plugin.ttsProvider.synthesize(text);
+      ctx.status = 200;
+      ctx.set('Content-Type', 'audio/wav');
+      ctx.body = buffer;
+    } catch (error) {
+      strapi.log.error('[ai-sdk] TTS error:', error);
+      ctx.status = 502;
+      ctx.body = { error: 'TTS synthesis failed' };
+    }
   },
 });
 
