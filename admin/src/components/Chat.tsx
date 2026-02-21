@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Button, TextInput } from '@strapi/design-system';
-import { Sparkle } from '@strapi/icons';
+import { Sparkle, VolumeUp, VolumeMute } from '@strapi/icons';
 import styled from 'styled-components';
 import Markdown from 'react-markdown';
 import { useChat, type ToolCall } from '../hooks/useChat';
@@ -116,6 +116,31 @@ const InputArea = styled.div`
   border-top: 1px solid #eaeaef;
 `;
 
+const VoiceToggle = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid ${({ $active }) => ($active ? '#4945ff' : '#dcdce4')};
+  background: ${({ $active }) => ($active ? '#f0f0ff' : '#ffffff')};
+  color: ${({ $active }) => ($active ? '#4945ff' : '#a5a5ba')};
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #4945ff;
+    color: #4945ff;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+`;
+
 const TypingDots = styled.span`
   display: inline-flex;
   gap: 4px;
@@ -219,12 +244,15 @@ function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) {
 
 export function Chat() {
   const [input, setInput] = useState('');
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [awaitingAudio, setAwaitingAudio] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fullTextRef = useRef('');
+  const voiceRef = useRef(voiceEnabled);
+  voiceRef.current = voiceEnabled;
   const { trigger, clearAnimation } = useAvatarAnimation();
   const { visibleText, startReveal, reset: resetReveal } = useTextReveal();
-  const { speak } = useAudioPlayer({
+  const { speak, stop: stopAudio } = useAudioPlayer({
     onPlayStart: (duration) => {
       trigger('speak');
       startReveal(fullTextRef.current, duration);
@@ -235,6 +263,7 @@ export function Chat() {
   const { messages, sendMessage, isLoading, error } = useChat({
     onAnimationTrigger: trigger,
     onStreamEnd: (fullText) => {
+      if (!voiceRef.current) return;
       fullTextRef.current = fullText;
       if (!fullText) {
         setAwaitingAudio(false);
@@ -247,11 +276,25 @@ export function Chat() {
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
-    fullTextRef.current = '';
-    resetReveal();
-    setAwaitingAudio(true);
+    if (voiceEnabled) {
+      fullTextRef.current = '';
+      resetReveal();
+      setAwaitingAudio(true);
+    }
     sendMessage(input);
     setInput('');
+  };
+
+  const handleToggleVoice = () => {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    if (!next) {
+      // Turning off — stop any playing audio and reveal text immediately
+      stopAudio();
+      resetReveal();
+      setAwaitingAudio(false);
+      clearAnimation();
+    }
   };
 
   useEffect(() => {
@@ -283,7 +326,7 @@ export function Chat() {
             // For the latest assistant message during audio reveal, show visibleText
             // For all other messages, show full content
             const displayContent =
-              isLatestAssistant && (awaitingAudio || visibleText)
+              voiceEnabled && isLatestAssistant && (awaitingAudio || visibleText)
                 ? visibleText
                 : message.content;
 
@@ -341,6 +384,14 @@ export function Chat() {
                 }
               />
             </Box>
+            <VoiceToggle
+              type="button"
+              onClick={handleToggleVoice}
+              title={voiceEnabled ? 'Disable voice' : 'Enable voice'}
+              $active={voiceEnabled}
+            >
+              {voiceEnabled ? <VolumeUp /> : <VolumeMute />}
+            </VoiceToggle>
             <Button
               type="submit"
               disabled={isLoading || !input.trim()}
