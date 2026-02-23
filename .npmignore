@@ -1,0 +1,9 @@
+admin/
+server/
+docs/
+node_modules/
+.editorconfig
+.gitignore
+tsconfig.json
+admin/tsconfig.json
+server/tsconfig.json

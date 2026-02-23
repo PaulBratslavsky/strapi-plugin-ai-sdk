@@ -1,6 +1,15 @@
 {
-  "version": "0.0.0",
-  "keywords": [],
+  "version": "0.1.0",
+  "keywords": [
+    "strapi",
+    "strapi-plugin",
+    "ai",
+    "ai-sdk",
+    "anthropic",
+    "claude",
+    "mcp",
+    "chat"
+  ],
   "type": "commonjs",
   "exports": {
     "./package.json": "./package.json",
@@ -65,12 +74,20 @@
     "kind": "plugin",
     "name": "ai-sdk",
     "displayName": "AI SDK",
-    "description": "Example project showcasing AI SDK from Vercel"
+    "description": "Strapi v5 plugin with AI chat, MCP server, TTS, and 3D avatar"
   },
-  "name": "ai-sdk",
-  "description": "Example project showcasing AI SDK from Vercel",
+  "name": "strapi-plugin-ai-sdk",
+  "description": "Strapi v5 plugin with AI chat, MCP server, TTS, and 3D avatar — powered by Vercel AI SDK and Anthropic Claude",
   "license": "MIT",
   "author": "Paul Bratslavsky <paul.bratslavsky@strapi.io>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PaulBratslavsky/strapi-plugin-ai-sdk.git"
+  },
+  "homepage": "https://github.com/PaulBratslavsky/strapi-plugin-ai-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/PaulBratslavsky/strapi-plugin-ai-sdk/issues"
+  },
   "bundleDependencies": [
     "@modelcontextprotocol/sdk",
     "zod"
