@@ -244,7 +244,7 @@ function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) {
 
 export function Chat() {
   const [input, setInput] = useState('');
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [awaitingAudio, setAwaitingAudio] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fullTextRef = useRef('');
