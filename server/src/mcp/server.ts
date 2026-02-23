@@ -1,10 +1,17 @@
 import type { Core } from '@strapi/strapi';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { listContentTypes, searchContent, writeContent } from '../tool-logic';
+import {
+  listContentTypes,
+  listContentTypesSchema,
+  listContentTypesDescription,
+  searchContent,
+  searchContentSchema,
+  searchContentDescription,
+  writeContent,
+  writeContentSchema,
+  writeContentDescription,
+} from '../tool-logic';
 import { sanitizeOutput, sanitizeInput } from './utils/sanitize';
-
-const MAX_RESULTS_PER_PAGE = 50;
 
 /**
  * Create an MCP server instance configured with Strapi tools.
@@ -28,8 +35,8 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
   server.registerTool(
     'list_content_types',
     {
-      description:
-        'List all Strapi content types and components with their fields, relations, and structure.',
+      description: listContentTypesDescription,
+      inputSchema: listContentTypesSchema.shape,
     },
     async () => {
       strapi.log.debug('[ai-sdk:mcp] Tool call: list_content_types');
@@ -60,38 +67,8 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
   server.registerTool(
     'search_content',
     {
-      description:
-        'Search and query any Strapi content type. Use list_content_types first to discover available content types and their fields, then use this tool to query specific collections.',
-      inputSchema: {
-        contentType: z
-          .string()
-          .min(1)
-          .describe(
-            'The content type UID to search, e.g. "api::article.article" or "plugin::users-permissions.user"'
-          ),
-        query: z
-          .string()
-          .optional()
-          .describe('Full-text search query string (searches across all searchable text fields)'),
-        filters: z
-          .record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null(), z.record(z.string(), z.unknown())]))
-          .optional()
-          .describe('Strapi filter object, e.g. { username: { $containsi: "john" } }'),
-        fields: z
-          .array(z.string())
-          .optional()
-          .describe('Specific fields to return. If omitted, returns all fields.'),
-        sort: z.string().optional().describe('Sort order, e.g. "createdAt:desc"'),
-        page: z.number().int().min(1).optional().default(1).describe('Page number (starts at 1)'),
-        pageSize: z
-          .number()
-          .int()
-          .min(1)
-          .max(MAX_RESULTS_PER_PAGE)
-          .optional()
-          .default(10)
-          .describe(`Results per page (max ${MAX_RESULTS_PER_PAGE})`),
-      },
+      description: searchContentDescription,
+      inputSchema: searchContentSchema.shape,
     },
     async (args) => {
       strapi.log.debug('[ai-sdk:mcp] Tool call: search_content');
@@ -120,35 +97,8 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
   server.registerTool(
     'write_content',
     {
-      description:
-        'Create or update a document in any Strapi content type. Use list_content_types first to discover the schema, and search_content to find existing documents for updates.',
-      inputSchema: {
-        contentType: z
-          .string()
-          .min(1)
-          .describe('Content type UID, e.g. "api::article.article"'),
-        action: z
-          .enum(['create', 'update'])
-          .describe('Whether to create a new document or update an existing one'),
-        documentId: z
-          .string()
-          .optional()
-          .describe('Required for update - the document ID to update'),
-        data: z
-          .record(z.string(), z.union([
-            z.string(),
-            z.number(),
-            z.boolean(),
-            z.null(),
-            z.array(z.unknown()),
-            z.record(z.string(), z.unknown()),
-          ]))
-          .describe('The field values to set. Must match the content type schema.'),
-        status: z
-          .enum(['draft', 'published'])
-          .optional()
-          .describe('Document status. Defaults to draft.'),
-      },
+      description: writeContentDescription,
+      inputSchema: writeContentSchema.shape,
     },
     async (args) => {
       strapi.log.debug('[ai-sdk:mcp] Tool call: write_content');

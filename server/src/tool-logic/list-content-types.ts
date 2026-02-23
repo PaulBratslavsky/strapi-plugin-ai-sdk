@@ -1,4 +1,10 @@
 import type { Core } from '@strapi/strapi';
+import { z } from 'zod';
+
+export const listContentTypesSchema = z.object({});
+
+export const listContentTypesDescription =
+  'List all Strapi content types and components with their fields, relations, and structure.';
 
 export interface RelationSummary {
   field: string;

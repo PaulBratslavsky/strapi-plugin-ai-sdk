@@ -5,7 +5,6 @@ import { generateText, streamText, type LanguageModel } from 'ai';
  * Minimal interface for the streamText result with methods we need.
  * We define this to avoid TypeScript declaration issues with AI SDK's internal types.
  */
-
 export interface StreamTextRawResult {
   readonly textStream: AsyncIterable<string>;
   toUIMessageStreamResponse(options?: {
@@ -16,6 +15,7 @@ export interface StreamTextRawResult {
     sendUsage?: boolean;
   }): Response;
 }
+
 import {
   CHAT_MODELS,
   DEFAULT_MODEL,
@@ -28,13 +28,13 @@ import {
   type StreamTextResult,
 } from './types';
 
-class AISDKManager {
+export class AIProvider {
   private provider: AnthropicProvider | null = null;
   private model: ChatModelName = DEFAULT_MODEL;
 
   /**
-   * Initialize the manager with plugin configuration
-   * Returns false if config is missing required fields
+   * Initialize the provider with plugin configuration.
+   * Returns false if config is missing required fields.
    */
   initialize(config: unknown): boolean {
     const cfg = config as Partial<PluginConfig> | undefined;
@@ -57,7 +57,7 @@ class AISDKManager {
 
   private getLanguageModel(): LanguageModel {
     if (!this.provider) {
-      throw new Error('AI SDK Manager not initialized');
+      throw new Error('AIProvider not initialized');
     }
     return this.provider(this.model);
   }
@@ -88,8 +88,8 @@ class AISDKManager {
   }
 
   /**
-   * Returns the raw streamText result for use with toUIMessageStreamResponse()
-   * Compatible with AI SDK UI hooks (useChat, useCompletion)
+   * Returns the raw streamText result for use with toUIMessageStreamResponse().
+   * Compatible with AI SDK UI hooks (useChat, useCompletion).
    */
   streamRaw(input: GenerateInput): StreamTextRawResult {
     return streamText(this.buildParams(input)) as StreamTextRawResult;
@@ -116,9 +116,3 @@ class AISDKManager {
     this.provider = null;
   }
 }
-
-export const aiSDKManager = new AISDKManager();
-export { AISDKManager };
-
-// Re-export types for convenience
-export * from './types';

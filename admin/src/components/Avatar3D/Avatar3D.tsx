@@ -78,9 +78,6 @@ function findBone(bones: THREE.Bone[], names: string[]): THREE.Bone | null {
 function extractRefsFromGLTF(model: THREE.Group): AnimatableRefs {
   const bones = collectSkeletonBones(model);
 
-  console.log('[Avatar3D] Found', bones.length, 'skeleton bones:',
-    bones.map((b) => b.name));
-
   const hips = findBone(bones, [
     'Hips', 'hips', 'J_Bip_C_Hips', 'mixamorigHips',
     'Pelvis', 'pelvis', 'Root', 'root',
@@ -101,13 +98,6 @@ function extractRefsFromGLTF(model: THREE.Group): AnimatableRefs {
     'J_Bip_R_UpperArm', 'mixamorigRightArm', 'arm_R', 'Arm.R',
     'Right shoulder', 'Right_shoulder',
   ]);
-
-  console.log('[Avatar3D] Bone mapping:', {
-    hips: hips?.name ?? 'NOT FOUND (using root)',
-    head: head?.name ?? 'NOT FOUND (using root)',
-    leftArm: leftArm?.name ?? 'NOT FOUND (using root)',
-    rightArm: rightArm?.name ?? 'NOT FOUND (using root)',
-  });
 
   return {
     root: model,
@@ -245,19 +235,6 @@ export function Avatar3D() {
           // Restore createImageBitmap now that textures are decoded
           window.createImageBitmap = savedCreateImageBitmap;
 
-          // Log texture status
-          model.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-              const mesh = child as THREE.Mesh;
-              const mat = mesh.material as THREE.MeshBasicMaterial;
-              console.log(`[Avatar3D] Mesh "${mesh.name}":`, {
-                type: mat.type,
-                hasMap: !!mat.map,
-                hasImage: !!(mat.map?.image),
-              });
-            }
-          });
-
           // Wrap model in a group so we can spin the entire thing
           // (rotating a SkinnedMesh parent bone only deforms vertices,
           //  but rotating a wrapper group spins mesh + skeleton together)
@@ -274,11 +251,6 @@ export function Avatar3D() {
           camera.position.set(0, faceY, -modelHeight * 0.9); // closer zoom
           controls.target.set(0, faceY, 0);
           controls.update();
-
-          console.log('[Avatar3D] Model bounds:', {
-            height: modelHeight.toFixed(2),
-            cameraY: faceY.toFixed(2),
-          });
 
           const refs = extractRefsFromGLTF(model);
           // Use the wrapper as root + hips so spin rotates everything

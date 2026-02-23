@@ -1,19 +1,7 @@
 import type { Core } from '@strapi/strapi';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import type { MCPSession, PluginInstance } from './lib/types';
 
 const PLUGIN_ID = 'ai-sdk';
-
-interface MCPSession {
-  server: McpServer;
-  transport: StreamableHTTPServerTransport;
-  createdAt: number;
-}
-
-interface PluginWithMCP {
-  createMcpServer?: (() => McpServer) | null;
-  mcpSessions?: Map<string, MCPSession> | null;
-}
 
 async function closeSession(strapi: Core.Strapi, sessionId: string, session: MCPSession) {
   try {
@@ -26,7 +14,7 @@ async function closeSession(strapi: Core.Strapi, sessionId: string, session: MCP
   }
 }
 
-async function closAllSessions(strapi: Core.Strapi, sessions: Map<string, MCPSession>) {
+async function closeAllSessions(strapi: Core.Strapi, sessions: Map<string, MCPSession>) {
   const closePromises = [...sessions.entries()].map(
     ([id, session]) => closeSession(strapi, id, session)
   );
@@ -37,16 +25,23 @@ async function closAllSessions(strapi: Core.Strapi, sessions: Map<string, MCPSes
 
 const destroy = async ({ strapi }: { strapi: Core.Strapi }) => {
   try {
-    const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginWithMCP;
+    const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginInstance;
 
+    // Clean up AI provider
+    if (plugin.aiProvider) {
+      plugin.aiProvider.destroy();
+      plugin.aiProvider = undefined;
+    }
+
+    // Clean up MCP sessions
     if (plugin.mcpSessions) {
-      await closAllSessions(strapi, plugin.mcpSessions);
+      await closeAllSessions(strapi, plugin.mcpSessions);
     }
 
     plugin.createMcpServer = null;
     plugin.mcpSessions = null;
   } catch (error) {
-    strapi.log.error(`[${PLUGIN_ID}:mcp] Error during cleanup`, {
+    strapi.log.error(`[${PLUGIN_ID}] Error during cleanup`, {
       error: error instanceof Error ? error.message : String(error),
     });
   }

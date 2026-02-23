@@ -1,4 +1,8 @@
 import type { ModelMessage, ToolSet, StopCondition } from 'ai';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import type { TTSProvider } from './tts/types';
+import type { AIProvider } from './ai-provider';
 
 // StopCondition uses a generic that varies by tool implementation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,4 +59,19 @@ export interface StreamTextResult {
 // Type guard to check if input is prompt-based
 export function isPromptInput(input: GenerateInput): input is PromptInput {
   return 'prompt' in input;
+}
+
+// --- Plugin instance types (shared across bootstrap, destroy, controllers) ---
+
+export interface MCPSession {
+  server: McpServer;
+  transport: StreamableHTTPServerTransport;
+  createdAt: number;
+}
+
+export interface PluginInstance {
+  aiProvider?: AIProvider;
+  ttsProvider?: TTSProvider;
+  createMcpServer?: (() => McpServer) | null;
+  mcpSessions?: Map<string, MCPSession> | null;
 }

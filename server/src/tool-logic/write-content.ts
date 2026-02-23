@@ -1,4 +1,28 @@
 import type { Core } from '@strapi/strapi';
+import { z } from 'zod';
+
+export const writeContentSchema = z.object({
+  contentType: z
+    .string()
+    .describe('Content type UID, e.g. "api::article.article"'),
+  action: z
+    .enum(['create', 'update'])
+    .describe('Whether to create a new document or update an existing one'),
+  documentId: z
+    .string()
+    .optional()
+    .describe('Required for update — the document ID to update'),
+  data: z
+    .record(z.string(), z.unknown())
+    .describe('The field values to set. Must match the content type schema.'),
+  status: z
+    .enum(['draft', 'published'])
+    .optional()
+    .describe('Document status. Defaults to draft.'),
+});
+
+export const writeContentDescription =
+  'Create or update a document in any Strapi content type. Use listContentTypes first to discover the schema, and searchContent to find existing documents for updates.';
 
 export interface WriteContentParams {
   contentType: string;

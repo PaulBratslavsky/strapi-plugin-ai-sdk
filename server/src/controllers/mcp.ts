@@ -3,6 +3,7 @@ import type { Context } from 'koa';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import type { MCPSession, PluginInstance } from '../lib/types';
 
 const PLUGIN_ID = 'ai-sdk';
 
@@ -16,31 +17,20 @@ const MAX_SESSIONS = 100;
 const CLEANUP_INTERVAL = 100;
 let requestCount = 0;
 
-interface MCPSession {
-  server: McpServer;
-  transport: StreamableHTTPServerTransport;
-  createdAt: number;
-}
-
-interface PluginWithMCP {
-  createMcpServer?: () => McpServer;
-  mcpSessions: Map<string, MCPSession>;
-}
-
 function isSessionExpired(session: { createdAt: number }): boolean {
   return Date.now() - session.createdAt > SESSION_TIMEOUT_MS;
 }
 
-async function cleanupExpiredSessions(plugin: PluginWithMCP, strapi: Core.Strapi): Promise<void> {
+async function cleanupExpiredSessions(plugin: PluginInstance, strapi: Core.Strapi): Promise<void> {
   let cleaned = 0;
-  for (const [sessionId, session] of plugin.mcpSessions.entries()) {
+  for (const [sessionId, session] of plugin.mcpSessions!.entries()) {
     if (isSessionExpired(session)) {
       try {
         await session.server.close();
       } catch {
         // Ignore close errors
       }
-      plugin.mcpSessions.delete(sessionId);
+      plugin.mcpSessions!.delete(sessionId);
       cleaned++;
     }
   }
@@ -68,19 +58,19 @@ function getSessionId(ctx: Context): string | undefined {
 }
 
 async function resolveSession(
-  plugin: PluginWithMCP,
+  plugin: PluginInstance,
   strapi: Core.Strapi,
   requestedSessionId: string | undefined
 ): Promise<{ session: MCPSession | null; expired: boolean }> {
   if (!requestedSessionId) return { session: null, expired: false };
 
-  const session = plugin.mcpSessions.get(requestedSessionId) ?? null;
+  const session = plugin.mcpSessions!.get(requestedSessionId) ?? null;
   if (!session) return { session: null, expired: false };
 
   if (isSessionExpired(session)) {
     strapi.log.debug(`[${PLUGIN_ID}:mcp] Session expired, removing: ${requestedSessionId}`);
     await closeSessionQuietly(session.server);
-    plugin.mcpSessions.delete(requestedSessionId);
+    plugin.mcpSessions!.delete(requestedSessionId);
     return { session: null, expired: true };
   }
 
@@ -88,12 +78,12 @@ async function resolveSession(
 }
 
 async function createSession(
-  plugin: PluginWithMCP,
+  plugin: PluginInstance,
   strapi: Core.Strapi
 ): Promise<{ session: MCPSession; sessionId: string } | null> {
-  if (plugin.mcpSessions.size >= MAX_SESSIONS) {
+  if (plugin.mcpSessions!.size >= MAX_SESSIONS) {
     await cleanupExpiredSessions(plugin, strapi);
-    if (plugin.mcpSessions.size >= MAX_SESSIONS) return null;
+    if (plugin.mcpSessions!.size >= MAX_SESSIONS) return null;
   }
 
   const sessionId = randomUUID();
@@ -106,7 +96,7 @@ async function createSession(
   await server.connect(transport);
 
   const session: MCPSession = { server, transport, createdAt: Date.now() };
-  plugin.mcpSessions.set(sessionId, session);
+  plugin.mcpSessions!.set(sessionId, session);
   strapi.log.debug(`[${PLUGIN_ID}:mcp] New session created: ${sessionId}`);
 
   return { session, sessionId };
@@ -116,7 +106,7 @@ async function handleTransport(
   ctx: Context,
   session: MCPSession,
   currentSessionId: string | undefined,
-  plugin: PluginWithMCP,
+  plugin: PluginInstance,
   strapi: Core.Strapi
 ): Promise<void> {
   try {
@@ -129,7 +119,7 @@ async function handleTransport(
 
     await closeSessionQuietly(session.server);
     if (currentSessionId) {
-      plugin.mcpSessions.delete(currentSessionId);
+      plugin.mcpSessions!.delete(currentSessionId);
     }
 
     if (!ctx.res.headersSent) {
@@ -143,7 +133,7 @@ type SessionResult =
   | { ok: false; status: number; code: number; message: string };
 
 async function getOrCreateSession(
-  plugin: PluginWithMCP,
+  plugin: PluginInstance,
   strapi: Core.Strapi,
   requestedSessionId: string | undefined
 ): Promise<SessionResult> {
@@ -178,7 +168,7 @@ function isInvalidPostBody(ctx: Context): boolean {
 
 const mcpController = ({ strapi }: { strapi: Core.Strapi }) => ({
   async handle(ctx: Context) {
-    const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginWithMCP;
+    const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginInstance;
 
     if (!plugin.createMcpServer) {
       ctx.status = 503;
