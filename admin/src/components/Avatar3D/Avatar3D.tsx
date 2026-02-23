@@ -13,9 +13,10 @@ import {
 import { buildPlaceholderModel } from './PlaceholderModel';
 
 /**
- * Path to a .glb model served from Strapi's public folder.
- * Place your model at: server/public/models/avatar.glb
- * Set to null to use the procedural anime model instead.
+ * Path to an optional .glb model served from Strapi's public folder.
+ * To use a custom avatar: place a .glb file at <strapi-project>/public/models/avatar.glb
+ * If the file is missing, the plugin falls back to a built-in procedural avatar.
+ * Set to null to always use the built-in avatar.
  */
 const MODEL_PATH: string | null = '/models/avatar.glb';
 
@@ -261,6 +262,7 @@ export function Avatar3D() {
         undefined,
         () => {
           window.createImageBitmap = savedCreateImageBitmap;
+          console.info('[ai-sdk] No custom avatar found at /models/avatar.glb — using built-in avatar. To use a custom model, place a .glb file at <strapi-project>/public/models/avatar.glb');
           const { scene: model, refs } = buildPlaceholderModel();
           scene.add(model);
           setupAnimations(refs);

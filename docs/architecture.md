@@ -688,6 +688,15 @@ graph TB
     AvatarContext["AvatarAnimationContext"] -->|"trigger(animation)"| AnimLoop
 ```
 
+**Custom Avatar Model (optional):**
+
+The plugin includes a built-in procedural avatar that works out of the box. To use a custom `.glb` model instead:
+
+1. Place your `.glb` file at `<strapi-project>/public/models/avatar.glb`
+2. Restart Strapi
+
+The plugin will automatically detect and load it. If the file is missing, you'll see a console message and the built-in avatar is used. To always use the built-in avatar, set `MODEL_PATH = null` in `Avatar3D.tsx`.
+
 **Why raw Three.js instead of React Three Fiber?**
 
 R3F's custom React reconciler is incompatible with Strapi's React 18 runtime (even R3F v8). It causes `Cannot read properties of undefined (reading 'S')` at runtime. The plugin uses imperative Three.js with `useRef`/`useEffect` instead.
