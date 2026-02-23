@@ -2,8 +2,24 @@ import type { Core } from '@strapi/strapi';
 import type { UIMessage } from 'ai';
 import { convertToModelMessages, stepCountIs } from 'ai';
 import type { StreamTextRawResult } from '../lib/ai-provider';
-import type { PluginInstance } from '../lib/types';
+import type { PluginConfig, PluginInstance } from '../lib/types';
 import { createTools, describeTools } from '../tools';
+
+const DEFAULT_PREAMBLE =
+  'You are a Strapi CMS assistant. Use your tools to fulfill user requests. When asked to create or update content, use the appropriate tool — do not tell the user you cannot.';
+
+function composeSystemPrompt(config: PluginConfig | undefined, toolsDescription: string, override?: string): string {
+  // If the caller provided an explicit system prompt, use it as the base
+  const base = override || config?.systemPrompt || DEFAULT_PREAMBLE;
+
+  // Support {tools} placeholder in the base prompt
+  if (base.includes('{tools}')) {
+    return base.replace('{tools}', toolsDescription);
+  }
+
+  // Otherwise append tool descriptions
+  return `${base}\n\n${toolsDescription}`;
+}
 
 const service = ({ strapi }: { strapi: Core.Strapi }) => {
   const plugin = strapi.plugin('ai-sdk') as unknown as PluginInstance;
@@ -28,12 +44,12 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
      * Compatible with AI SDK UI hooks (useChat)
      */
     async chat(messages: UIMessage[], options?: { system?: string }): Promise<StreamTextRawResult> {
+      const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
       const modelMessages = await convertToModelMessages(messages);
       const tools = createTools(strapi);
-      const toolsPrompt = describeTools(tools);
-      const system = options?.system
-        ? `${options.system}\n\n${toolsPrompt}`
-        : toolsPrompt;
+      const toolsDescription = describeTools(tools);
+      const system = composeSystemPrompt(config, toolsDescription, options?.system);
+
       return plugin.aiProvider!.streamRaw({
         messages: modelMessages,
         system,

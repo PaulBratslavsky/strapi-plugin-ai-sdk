@@ -3,28 +3,27 @@ import type { Context } from 'koa';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import type { MCPSession, PluginInstance } from '../lib/types';
+import type { MCPSession, PluginConfig, PluginInstance } from '../lib/types';
 
 const PLUGIN_ID = 'ai-sdk';
 
-// Session expires after 4 hours of inactivity
-const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;
+// Default values (also set in config/index.ts, but kept here as fallbacks)
+const DEFAULT_SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;
+const DEFAULT_MAX_SESSIONS = 100;
+const DEFAULT_CLEANUP_INTERVAL = 100;
 
-// Limit concurrent sessions to prevent memory exhaustion
-const MAX_SESSIONS = 100;
-
-// Run session cleanup every N requests to avoid O(n) on every request
-const CLEANUP_INTERVAL = 100;
-let requestCount = 0;
-
-function isSessionExpired(session: { createdAt: number }): boolean {
-  return Date.now() - session.createdAt > SESSION_TIMEOUT_MS;
+function isSessionExpired(session: { createdAt: number }, timeoutMs: number): boolean {
+  return Date.now() - session.createdAt > timeoutMs;
 }
 
-async function cleanupExpiredSessions(plugin: PluginInstance, strapi: Core.Strapi): Promise<void> {
+async function cleanupExpiredSessions(
+  plugin: PluginInstance,
+  strapi: Core.Strapi,
+  timeoutMs: number
+): Promise<void> {
   let cleaned = 0;
   for (const [sessionId, session] of plugin.mcpSessions!.entries()) {
-    if (isSessionExpired(session)) {
+    if (isSessionExpired(session, timeoutMs)) {
       try {
         await session.server.close();
       } catch {
@@ -60,14 +59,15 @@ function getSessionId(ctx: Context): string | undefined {
 async function resolveSession(
   plugin: PluginInstance,
   strapi: Core.Strapi,
-  requestedSessionId: string | undefined
+  requestedSessionId: string | undefined,
+  timeoutMs: number
 ): Promise<{ session: MCPSession | null; expired: boolean }> {
   if (!requestedSessionId) return { session: null, expired: false };
 
   const session = plugin.mcpSessions!.get(requestedSessionId) ?? null;
   if (!session) return { session: null, expired: false };
 
-  if (isSessionExpired(session)) {
+  if (isSessionExpired(session, timeoutMs)) {
     strapi.log.debug(`[${PLUGIN_ID}:mcp] Session expired, removing: ${requestedSessionId}`);
     await closeSessionQuietly(session.server);
     plugin.mcpSessions!.delete(requestedSessionId);
@@ -79,11 +79,13 @@ async function resolveSession(
 
 async function createSession(
   plugin: PluginInstance,
-  strapi: Core.Strapi
+  strapi: Core.Strapi,
+  maxSessions: number,
+  timeoutMs: number
 ): Promise<{ session: MCPSession; sessionId: string } | null> {
-  if (plugin.mcpSessions!.size >= MAX_SESSIONS) {
-    await cleanupExpiredSessions(plugin, strapi);
-    if (plugin.mcpSessions!.size >= MAX_SESSIONS) return null;
+  if (plugin.mcpSessions!.size >= maxSessions) {
+    await cleanupExpiredSessions(plugin, strapi, timeoutMs);
+    if (plugin.mcpSessions!.size >= maxSessions) return null;
   }
 
   const sessionId = randomUUID();
@@ -135,9 +137,11 @@ type SessionResult =
 async function getOrCreateSession(
   plugin: PluginInstance,
   strapi: Core.Strapi,
-  requestedSessionId: string | undefined
+  requestedSessionId: string | undefined,
+  maxSessions: number,
+  timeoutMs: number
 ): Promise<SessionResult> {
-  const { session: existing, expired } = await resolveSession(plugin, strapi, requestedSessionId);
+  const { session: existing, expired } = await resolveSession(plugin, strapi, requestedSessionId, timeoutMs);
 
   if (requestedSessionId && !existing) {
     return {
@@ -154,7 +158,7 @@ async function getOrCreateSession(
     return { ok: true, session: existing, sessionId: requestedSessionId };
   }
 
-  const created = await createSession(plugin, strapi);
+  const created = await createSession(plugin, strapi, maxSessions, timeoutMs);
   if (!created) {
     return { ok: false, status: 429, code: -32000, message: 'Too many active sessions. Please try again later.' };
   }
@@ -166,47 +170,56 @@ function isInvalidPostBody(ctx: Context): boolean {
   return ctx.method === 'POST' && (typeof ctx.request.body !== 'object' || ctx.request.body === null);
 }
 
-const mcpController = ({ strapi }: { strapi: Core.Strapi }) => ({
-  async handle(ctx: Context) {
-    const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginInstance;
+const mcpController = ({ strapi }: { strapi: Core.Strapi }) => {
+  // Read MCP limits from config at controller creation time
+  const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
+  const timeoutMs = config?.mcp?.sessionTimeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
+  const maxSessions = config?.mcp?.maxSessions ?? DEFAULT_MAX_SESSIONS;
+  const cleanupInterval = config?.mcp?.cleanupInterval ?? DEFAULT_CLEANUP_INTERVAL;
+  let requestCount = 0;
 
-    if (!plugin.createMcpServer) {
-      ctx.status = 503;
-      ctx.body = { error: 'MCP not initialized', message: 'The MCP server is not available. Check plugin configuration.' };
-      return;
-    }
+  return {
+    async handle(ctx: Context) {
+      const plugin = strapi.plugin(PLUGIN_ID) as unknown as PluginInstance;
 
-    if (++requestCount % CLEANUP_INTERVAL === 0) {
-      await cleanupExpiredSessions(plugin, strapi);
-    }
-
-    try {
-      const result = await getOrCreateSession(plugin, strapi, getSessionId(ctx));
-
-      if (result.ok === false) {
-        jsonRpcError(ctx, result.status, result.code, result.message);
+      if (!plugin.createMcpServer) {
+        ctx.status = 503;
+        ctx.body = { error: 'MCP not initialized', message: 'The MCP server is not available. Check plugin configuration.' };
         return;
       }
 
-      if (isInvalidPostBody(ctx)) {
-        jsonRpcError(ctx, 400, -32700, 'Invalid JSON-RPC request');
-        return;
+      if (++requestCount % cleanupInterval === 0) {
+        await cleanupExpiredSessions(plugin, strapi, timeoutMs);
       }
 
-      await handleTransport(ctx, result.session, result.sessionId, plugin, strapi);
-    } catch (error) {
-      strapi.log.error(`[${PLUGIN_ID}:mcp] Error handling MCP request`, {
-        error: error instanceof Error ? error.message : String(error),
-        method: ctx.method,
-        path: ctx.path,
-      });
+      try {
+        const result = await getOrCreateSession(plugin, strapi, getSessionId(ctx), maxSessions, timeoutMs);
 
-      if (!ctx.res.headersSent) {
-        ctx.status = 500;
-        ctx.body = { error: 'MCP request failed', message: error instanceof Error ? error.message : 'Unknown error' };
+        if (result.ok === false) {
+          jsonRpcError(ctx, result.status, result.code, result.message);
+          return;
+        }
+
+        if (isInvalidPostBody(ctx)) {
+          jsonRpcError(ctx, 400, -32700, 'Invalid JSON-RPC request');
+          return;
+        }
+
+        await handleTransport(ctx, result.session, result.sessionId, plugin, strapi);
+      } catch (error) {
+        strapi.log.error(`[${PLUGIN_ID}:mcp] Error handling MCP request`, {
+          error: error instanceof Error ? error.message : String(error),
+          method: ctx.method,
+          path: ctx.path,
+        });
+
+        if (!ctx.res.headersSent) {
+          ctx.status = 500;
+          ctx.body = { error: 'MCP request failed', message: error instanceof Error ? error.message : 'Unknown error' };
+        }
       }
-    }
-  },
-});
+    },
+  };
+};
 
 export default mcpController;

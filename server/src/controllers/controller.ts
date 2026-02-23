@@ -2,7 +2,6 @@ import type { Core } from '@strapi/strapi';
 import type { Context } from 'koa';
 import { Readable } from 'node:stream';
 import { getService, validateBody, validateChatBody, createSSEStream, writeSSE } from '../lib/utils';
-import type { PluginConfig } from '../lib/types';
 import type { TTSProvider } from '../lib/tts/types';
 
 const PLUGIN_ID = 'ai-sdk';
@@ -63,10 +62,7 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     const service = getService(strapi, ctx);
     if (!service) return;
 
-    const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
-    const system = body.system || config?.systemPrompt || undefined;
-
-    const result = await service.chat(body.messages, { system });
+    const result = await service.chat(body.messages, { system: body.system });
 
     // Get the response using toUIMessageStreamResponse
     const response = result.toUIMessageStreamResponse();

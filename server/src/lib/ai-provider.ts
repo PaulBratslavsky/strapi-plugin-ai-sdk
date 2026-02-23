@@ -1,4 +1,3 @@
-import { createAnthropic, type AnthropicProvider } from '@ai-sdk/anthropic';
 import { generateText, streamText, type LanguageModel } from 'ai';
 
 /**
@@ -17,20 +16,30 @@ export interface StreamTextRawResult {
 }
 
 import {
-  CHAT_MODELS,
   DEFAULT_MODEL,
   DEFAULT_TEMPERATURE,
   isPromptInput,
   type PluginConfig,
-  type ChatModelName,
   type GenerateInput,
   type GenerateTextResult,
   type StreamTextResult,
 } from './types';
 
+type ProviderCreator = (config: { apiKey: string; baseURL?: string }) => (modelId: string) => LanguageModel;
+
 export class AIProvider {
-  private provider: AnthropicProvider | null = null;
-  private model: ChatModelName = DEFAULT_MODEL;
+  private static providerRegistry = new Map<string, ProviderCreator>();
+
+  private modelFactory: ((modelId: string) => LanguageModel) | null = null;
+  private model: string = DEFAULT_MODEL;
+
+  /**
+   * Register a named provider creator.
+   * Call this before initialize() — typically in bootstrap.
+   */
+  static registerProvider(name: string, creator: ProviderCreator): void {
+    AIProvider.providerRegistry.set(name, creator);
+  }
 
   /**
    * Initialize the provider with plugin configuration.
@@ -43,12 +52,19 @@ export class AIProvider {
       return false;
     }
 
-    this.provider = createAnthropic({
-      apiKey: cfg.anthropicApiKey,
-      baseURL: cfg.baseURL,
-    });
+    const providerName = cfg.provider ?? 'anthropic';
+    const creator = AIProvider.providerRegistry.get(providerName);
+    if (!creator) {
+      throw new Error(
+        `AI provider "${providerName}" not registered. ` +
+        `Registered: ${[...AIProvider.providerRegistry.keys()].join(', ') || 'none'}. ` +
+        `Register providers in bootstrap before initializing.`
+      );
+    }
 
-    if (cfg.chatModel && CHAT_MODELS.includes(cfg.chatModel)) {
+    this.modelFactory = creator({ apiKey: cfg.anthropicApiKey, baseURL: cfg.baseURL });
+
+    if (cfg.chatModel) {
       this.model = cfg.chatModel;
     }
 
@@ -56,10 +72,10 @@ export class AIProvider {
   }
 
   private getLanguageModel(): LanguageModel {
-    if (!this.provider) {
+    if (!this.modelFactory) {
       throw new Error('AIProvider not initialized');
     }
-    return this.provider(this.model);
+    return this.modelFactory(this.model);
   }
 
   private buildParams(input: GenerateInput) {
@@ -104,15 +120,15 @@ export class AIProvider {
     return this.stream({ prompt, ...options });
   }
 
-  getChatModel(): ChatModelName {
+  getChatModel(): string {
     return this.model;
   }
 
   isInitialized(): boolean {
-    return this.provider !== null;
+    return this.modelFactory !== null;
   }
 
   destroy(): void {
-    this.provider = null;
+    this.modelFactory = null;
   }
 }

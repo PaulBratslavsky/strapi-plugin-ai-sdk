@@ -2,7 +2,9 @@ import type { ModelMessage, ToolSet, StopCondition } from 'ai';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { TTSProvider } from './tts/types';
+import type { TTSRegistry } from './tts';
 import type { AIProvider } from './ai-provider';
+import type { ToolRegistry } from './tool-registry';
 
 // StopCondition uses a generic that varies by tool implementation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,13 +23,21 @@ export type ChatModelName = (typeof CHAT_MODELS)[number];
 export const DEFAULT_MODEL: ChatModelName = 'claude-sonnet-4-20250514';
 export const DEFAULT_TEMPERATURE = 0.7;
 
+export interface MCPConfig {
+  sessionTimeoutMs?: number;
+  maxSessions?: number;
+  cleanupInterval?: number;
+}
+
 export interface PluginConfig {
   anthropicApiKey: string;
-  chatModel?: ChatModelName;
+  provider?: string;
+  chatModel?: string;
   baseURL?: string;
   systemPrompt?: string;
   typecastApiKey?: string;
   typecastActorId?: string;
+  mcp?: MCPConfig;
 }
 
 export interface GenerateOptions {
@@ -72,6 +82,8 @@ export interface MCPSession {
 export interface PluginInstance {
   aiProvider?: AIProvider;
   ttsProvider?: TTSProvider;
+  ttsRegistry?: TTSRegistry;
+  toolRegistry?: ToolRegistry;
   createMcpServer?: (() => McpServer) | null;
   mcpSessions?: Map<string, MCPSession> | null;
 }
