@@ -11,6 +11,7 @@ A comprehensive guide to the Strapi v5 plugin that embeds an AI chat interface, 
 - [Plugin Lifecycle](#plugin-lifecycle)
 - [Server-Side Architecture](#server-side-architecture)
   - [Configuration](#configuration)
+  - [Guardrails Middleware](#guardrails-middleware)
   - [AI Provider Factory](#ai-provider-factory)
   - [Tool Registry](#tool-registry)
   - [TTS Provider Registry](#tts-provider-registry)
@@ -35,6 +36,10 @@ A comprehensive guide to the Strapi v5 plugin that embeds an AI chat interface, 
   - [Adding a TTS Provider](#adding-a-tts-provider)
   - [Customizing the System Prompt](#customizing-the-system-prompt)
   - [Tuning MCP Session Limits](#tuning-mcp-session-limits)
+- [Testing](#testing)
+  - [Test Scripts](#test-scripts)
+  - [Testing Methodology](#testing-methodology)
+  - [Running Tests](#running-tests)
 - [File Reference](#file-reference)
 
 ---
@@ -49,6 +54,7 @@ graph TB
     end
 
     subgraph Server["Strapi Server"]
+        Guardrail["Guardrail Middleware<br/>(input safety)"]
         Controller["Controllers"]
         Service["Service Layer"]
         AIProvider["AI Provider<br/>(Anthropic/Custom)"]
@@ -64,8 +70,9 @@ graph TB
         MCPClient["MCP Clients"]
     end
 
-    UI -->|"POST /chat"| Controller
+    UI -->|"POST /chat"| Guardrail
     UI -->|"POST /tts"| Controller
+    Guardrail -->|"allowed"| Controller
     Controller --> Service
     Service --> AIProvider
     Service --> ToolReg
@@ -74,7 +81,7 @@ graph TB
     ToolLogic -->|"Strapi Document API"| DB[(Database)]
     Controller -->|"/tts"| TTS
     TTS --> TypecastAPI
-    MCPClient -->|"JSON-RPC over HTTP"| MCP
+    MCPClient -->|"JSON-RPC over HTTP"| Guardrail
     MCP --> ToolReg
     MCP --> ToolLogic
     Avatar -.->|"animation triggers"| UI
@@ -201,6 +208,7 @@ interface PluginConfig {
   typecastApiKey?: string;       // For TTS
   typecastActorId?: string;      // For TTS
   mcp?: MCPConfig;               // MCP session tuning
+  guardrails?: GuardrailConfig;  // Input safety guardrails
 }
 
 interface MCPConfig {
@@ -228,6 +236,35 @@ export default {
   },
 };
 ```
+
+---
+
+### Guardrails Middleware
+
+The guardrail middleware intercepts all AI requests before they reach the controller. It runs as a Strapi route middleware registered on every AI endpoint (`/ask`, `/ask-stream`, `/chat`, `/mcp`).
+
+```mermaid
+graph LR
+    Request["HTTP Request"] --> Auth["Auth"]
+    Auth --> Guardrail["Guardrail Middleware"]
+    Guardrail -->|"blocked (chat)"| SSE["SSE message<br/>(renders in chat UI)"]
+    Guardrail -->|"blocked (API)"| JSON["403 JSON error"]
+    Guardrail -->|"allowed"| Controller["Controller"]
+```
+
+**Pipeline steps (per request):**
+
+1. **Extract input** -- adapts to request shape (`messages[]`, `prompt`, JSON-RPC `params`)
+2. **Custom hook** -- `beforeProcess` runs first (if configured)
+3. **Normalize** -- NFKC, strip zero-width chars, collapse whitespace
+4. **Pattern match** -- regex patterns from `default-patterns.json` + user config
+5. **Length check** -- reject if over `maxInputLength` (default: 10,000)
+
+Patterns are compiled once at startup, not per-request. The middleware produces route-aware responses: chat routes get an SSE stream (so the UI renders a natural assistant message), while API routes get a structured 403 JSON error.
+
+**Default pattern categories:** prompt injection, jailbreak, system prompt extraction, system prompt mimicry, destructive commands.
+
+For full details, configuration examples, and the `beforeProcess` hook API, see [docs/guardrails.md](./guardrails.md).
 
 ---
 
@@ -763,6 +800,13 @@ sequenceDiagram
     ChatUI->>useChat: sendMessage(text)
     useChat->>useChat: Append user + empty assistant message
     useChat->>Controller: POST /chat {messages}
+
+    Note over Controller: Guardrail middleware runs first
+    Controller->>Controller: extractUserInput() + runGuardrails()
+    alt Blocked
+        Controller-->>useChat: SSE stream with blocked message
+    end
+
     Controller->>Controller: validateChatBody()
     Controller->>Service: chat(messages, {system})
     Service->>Service: createTools(strapi) from ToolRegistry
@@ -1082,6 +1126,68 @@ export default {
 
 ---
 
+## Testing
+
+### Test Scripts
+
+The plugin uses **end-to-end integration tests** that run against a live Strapi instance. No test framework is needed -- each test is a standalone script using native `fetch`.
+
+| Script | Command | What It Tests |
+|---|---|---|
+| `test:api` | `npx tsx tests/ai-sdk.test.ts` | `/ask` and `/ask-stream` endpoints (valid requests, error handling) |
+| `test:stream` | `node tests/test-stream.mjs` | Streaming response (visual output, chunk timing) |
+| `test:chat` | `node tests/test-chat.mjs` | Chat endpoint with UI Message Stream v1 protocol |
+| `test:guardrails` | `npx tsx tests/test-guardrails.ts` | All guardrail categories (42 assertions) |
+| `test:ts:front` | `tsc -p admin/tsconfig.json` | Admin TypeScript type checking |
+| `test:ts:back` | `tsc -p server/tsconfig.json` | Server TypeScript type checking |
+
+### Testing Methodology
+
+**Why e2e scripts instead of unit tests?**
+
+The plugin's value is in how its components work together end-to-end: middleware intercepts requests, the AI provider streams responses, tools execute against the Strapi document API, and SSE events reach the frontend. Unit tests with mocked Strapi internals would miss integration issues while adding maintenance burden. Standalone scripts with `fetch` are simple, framework-free, and test the actual request pipeline.
+
+**Test design principles:**
+
+- **Self-contained** -- each script runs independently, no shared state
+- **Health check first** -- all scripts verify Strapi is running before testing
+- **Pass/fail output** -- clear emoji indicators, exit code 1 on failure
+- **Auth-aware** -- `STRAPI_TOKEN` env var for authenticated endpoints
+- **Smart assertions** -- guardrail tests check response body (not just status code) to distinguish guardrail blocks from permission blocks
+
+### Running Tests
+
+**Prerequisites:**
+
+1. Strapi is running (`yarn dev` in the Strapi app)
+2. Plugin is built (`npm run build` in the plugin directory)
+3. Content API endpoints are accessible (either public or via API token)
+
+**Run all tests:**
+
+```bash
+# From the plugin directory
+npm run test:guardrails    # Guardrail safety tests
+npm run test:api           # API endpoint tests
+npm run test:stream        # Streaming visual test
+npm run test:chat          # Chat protocol test
+```
+
+**With authentication:**
+
+```bash
+STRAPI_TOKEN=your-api-token npm run test:guardrails
+```
+
+**Type checking only (no running Strapi needed):**
+
+```bash
+npm run test:ts:back
+npm run test:ts:front
+```
+
+---
+
 ## File Reference
 
 ```
@@ -1092,6 +1198,13 @@ server/src/
   destroy.ts                        # Graceful shutdown
   config/
     index.ts                        # Plugin config defaults and validator
+  guardrails/
+    default-patterns.json           # Built-in regex patterns (5 categories)
+    types.ts                        # GuardrailInput, GuardrailResult, GuardrailConfig
+    index.ts                        # Core logic (normalize, extract, match, run)
+    middleware.ts                    # Strapi route middleware factory
+  middlewares/
+    index.ts                        # Registers { guardrail } middleware
   lib/
     types.ts                        # Shared types (PluginConfig, PluginInstance, etc.)
     ai-provider.ts                  # AIProvider class with static provider registry
@@ -1107,8 +1220,8 @@ server/src/
   services/
     service.ts                      # AI service facade (prompt composition, tool wiring)
   routes/
-    content-api.ts                  # Public API routes (/ask, /chat, /mcp)
-    admin-api.ts                    # Admin routes (/chat, /tts)
+    content-api/index.ts            # Public API routes (/ask, /chat, /mcp) + guardrail middleware
+    admin/index.ts                  # Admin routes (/chat, /tts) + guardrail middleware
   tools/
     index.ts                        # createTools() + describeTools() bridge to registry
     definitions/
@@ -1157,4 +1270,14 @@ admin/src/
     getTranslation.ts               # i18n key helper
   translations/
     en.json                         # English translations (empty)
+
+tests/
+  ai-sdk.test.ts                    # /ask and /ask-stream endpoint tests
+  test-stream.mjs                   # Streaming visual test (chunk timing)
+  test-chat.mjs                     # Chat endpoint with conversation history
+  test-guardrails.ts                # Guardrail e2e tests (42 assertions)
+
+docs/
+  architecture.md                   # This file
+  guardrails.md                     # Guardrails comprehensive guide
 ```

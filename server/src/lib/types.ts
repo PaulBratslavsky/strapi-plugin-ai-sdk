@@ -5,6 +5,7 @@ import type { TTSProvider } from './tts/types';
 import type { TTSRegistry } from './tts';
 import type { AIProvider } from './ai-provider';
 import type { ToolRegistry } from './tool-registry';
+import type { GuardrailConfig } from '../guardrails/types';
 
 // StopCondition uses a generic that varies by tool implementation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +39,7 @@ export interface PluginConfig {
   typecastApiKey?: string;
   typecastActorId?: string;
   mcp?: MCPConfig;
+  guardrails?: GuardrailConfig;
 }
 
 export interface GenerateOptions {

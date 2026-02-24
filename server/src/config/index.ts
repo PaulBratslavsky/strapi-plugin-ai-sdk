@@ -10,6 +10,10 @@ export default {
       maxSessions: 100,
       cleanupInterval: 100,
     },
+    guardrails: {
+      enabled: true,
+      maxInputLength: 10000,
+    },
   },
   validator(config: unknown) {
     if (typeof config !== 'object' || config === null) {

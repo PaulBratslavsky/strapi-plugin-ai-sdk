@@ -1,0 +1,41 @@
+{
+  "promptInjection": [
+    "ignore (all |any )?(previous|prior|above) (instructions|prompts|rules)",
+    "disregard (your|all|any) (instructions|rules|guidelines)",
+    "new instructions\\s*:",
+    "forget (your|all|everything|previous|what you were told)",
+    "override (your|the|all) (instructions|system|rules|safety)",
+    "bypass (your|all|the) (rules|restrictions|filters|safety|guidelines)"
+  ],
+  "jailbreak": [
+    "you are now (in )?(developer|admin|unrestricted|god) mode",
+    "pretend you (are|have no|don't have)",
+    "act as if you (have no|are not|don't have)",
+    "do anything now",
+    "\\bDAN\\b.*mode",
+    "jailbreak",
+    "unrestricted mode",
+    "no (restrictions|limitations|rules|filters|safety)"
+  ],
+  "systemPromptExtraction": [
+    "(reveal|show|print|output|display|repeat) (me )?(your )?(system )?(prompt|instructions|rules|guidelines)",
+    "what (is|are) your (system )?(prompt|instructions|rules)",
+    "what were you told",
+    "repeat the (above|system|initial) (text|prompt|instructions|message)"
+  ],
+  "systemPromptMimicry": [
+    "^\\s*\\[?(system|SYSTEM)\\]?\\s*:",
+    "^\\s*<\\|?(system|SYSTEM)\\|?>",
+    "<<\\s*SYS\\s*>>",
+    "SYSTEM_INSTRUCTIONS"
+  ],
+  "destructive": [
+    "rm\\s+-rf",
+    "drop\\s+(table|database|all)",
+    "delete\\s+(all|every|each)\\s+(content|entries|documents|records|data)",
+    "truncate\\s+table",
+    "remove\\s+(all|every|each)\\s+(content|entries|documents|records)",
+    "wipe\\s+(all\\s+the\\s+|all\\s+|the\\s+)(data|content|database)",
+    "destroy\\s+(all|every|each)\\s+(content|entries|documents|records)"
+  ]
+}

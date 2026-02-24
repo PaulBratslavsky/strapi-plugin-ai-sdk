@@ -7,6 +7,7 @@ export default {
       handler: 'controller.chat',
       config: {
         policies: [],
+        middlewares: ['plugin::ai-sdk.guardrail'],
       },
     },
     {

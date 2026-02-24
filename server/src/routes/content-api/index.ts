@@ -7,6 +7,7 @@ export default {
       handler: 'controller.ask',
       config: {
         policies: [],
+        middlewares: ['plugin::ai-sdk.guardrail'],
       },
     },
     {
@@ -15,6 +16,7 @@ export default {
       handler: 'controller.askStream',
       config: {
         policies: [],
+        middlewares: ['plugin::ai-sdk.guardrail'],
       },
     },
     {
@@ -23,6 +25,7 @@ export default {
       handler: 'controller.chat',
       config: {
         policies: [],
+        middlewares: ['plugin::ai-sdk.guardrail'],
       },
     },
     {
@@ -31,6 +34,7 @@ export default {
       handler: 'mcp.handle',
       config: {
         policies: [],
+        middlewares: ['plugin::ai-sdk.guardrail'],
       },
     },
     {

@@ -37,7 +37,11 @@
     "watch:link": "strapi-plugin watch:link",
     "verify": "strapi-plugin verify",
     "test:ts:front": "run -T tsc -p admin/tsconfig.json",
-    "test:ts:back": "run -T tsc -p server/tsconfig.json"
+    "test:ts:back": "run -T tsc -p server/tsconfig.json",
+    "test:api": "npx tsx tests/ai-sdk.test.ts",
+    "test:stream": "node tests/test-stream.mjs",
+    "test:chat": "node tests/test-chat.mjs",
+    "test:guardrails": "npx tsx tests/test-guardrails.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.15",
