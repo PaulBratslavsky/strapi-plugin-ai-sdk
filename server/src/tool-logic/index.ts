@@ -6,3 +6,6 @@ export type { SearchContentParams, SearchContentResult } from './search-content'
 
 export { writeContent, writeContentSchema, writeContentDescription } from './write-content';
 export type { WriteContentParams, WriteContentResult } from './write-content';
+
+export { sendEmail, sendEmailSchema, sendEmailDescription } from './send-email';
+export type { SendEmailParams, SendEmailResult } from './send-email';
