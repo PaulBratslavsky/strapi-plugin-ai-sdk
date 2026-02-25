@@ -4,10 +4,13 @@ import { convertToModelMessages, stepCountIs } from 'ai';
 import type { StreamTextRawResult } from '../lib/ai-provider';
 import type { PluginConfig, PluginInstance } from '../lib/types';
 import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_CONVERSATION_MESSAGES } from '../lib/types';
-import { createTools, describeTools } from '../tools';
+import { createTools, createPublicTools, describeTools } from '../tools';
 
 const DEFAULT_PREAMBLE =
   'You are a Strapi CMS assistant. Use your tools to fulfill user requests. When asked to create or update content, use the appropriate tool — do not tell the user you cannot.';
+
+const DEFAULT_PUBLIC_PREAMBLE =
+  'You are a helpful public assistant for this website. Use your tools to answer questions about the site content. You cannot modify any content or perform administrative actions.';
 
 function composeSystemPrompt(config: PluginConfig | undefined, toolsDescription: string, override?: string): string {
   // If the caller provided an explicit system prompt, use it as the base
@@ -73,6 +76,47 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
         } catch (err) {
           strapi.log.warn('[ai-sdk] Failed to load user memories:', err);
         }
+      }
+
+      return plugin.aiProvider!.streamRaw({
+        messages: modelMessages,
+        system,
+        tools,
+        maxOutputTokens,
+        stopWhen: stepCountIs(6),
+      });
+    },
+
+    /**
+     * Public chat - restricted tools, public memories, no admin auth
+     */
+    async publicChat(messages: UIMessage[], options?: { system?: string }): Promise<StreamTextRawResult> {
+      const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
+      const maxMessages = config?.maxConversationMessages ?? DEFAULT_MAX_CONVERSATION_MESSAGES;
+      const maxOutputTokens = config?.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
+      const allowedContentTypes = config?.publicChat?.allowedContentTypes ?? [];
+
+      const trimmedMessages = messages.length > maxMessages
+        ? messages.slice(-maxMessages)
+        : messages;
+
+      const modelMessages = await convertToModelMessages(trimmedMessages);
+      const tools = createPublicTools(strapi, allowedContentTypes);
+      const toolsDescription = describeTools(tools);
+      let system = composeSystemPrompt(config, toolsDescription, options?.system || DEFAULT_PUBLIC_PREAMBLE);
+
+      // Inject public memories into system prompt
+      try {
+        const memories = await strapi.documents('plugin::ai-sdk.public-memory' as any).findMany({
+          fields: ['content', 'category'],
+          sort: { createdAt: 'desc' },
+        });
+        if (memories.length > 0) {
+          const lines = memories.map((m: any) => `- [${m.category}] ${m.content}`);
+          system += `\n\nPublic knowledge base (facts and information available to all visitors):\n${lines.join('\n')}`;
+        }
+      } catch (err) {
+        strapi.log.warn('[ai-sdk] Failed to load public memories:', err);
       }
 
       return plugin.aiProvider!.streamRaw({

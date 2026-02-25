@@ -6,4 +6,5 @@ export const listContentTypesTool: ToolDefinition = {
   description: listContentTypesDescription,
   schema: listContentTypesSchema,
   execute: async (_args, strapi) => listContentTypes(strapi),
+  publicSafe: true,
 };

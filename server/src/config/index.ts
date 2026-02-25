@@ -16,6 +16,10 @@ export default {
       enabled: true,
       maxInputLength: 10000,
     },
+    publicChat: {
+      /** Content type UIDs the public chat is allowed to query (e.g. ['api::article.article']) */
+      allowedContentTypes: [] as string[],
+    },
   },
   validator(config: unknown) {
     if (typeof config !== 'object' || config === null) {

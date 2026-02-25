@@ -30,6 +30,23 @@ export default {
     },
     {
       method: 'POST',
+      path: '/public-chat',
+      handler: 'controller.publicChat',
+      config: {
+        policies: [],
+        middlewares: ['plugin::ai-sdk.guardrail'],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/widget.js',
+      handler: 'controller.serveWidget',
+      config: {
+        policies: [],
+      },
+    },
+    {
+      method: 'POST',
       path: '/mcp',
       handler: 'mcp.handle',
       config: {

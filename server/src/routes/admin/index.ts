@@ -72,5 +72,29 @@ export default {
       handler: 'memory.delete',
       config: { policies: [] },
     },
+    {
+      method: 'GET',
+      path: '/public-memories',
+      handler: 'public-memory.find',
+      config: { policies: [] },
+    },
+    {
+      method: 'POST',
+      path: '/public-memories',
+      handler: 'public-memory.create',
+      config: { policies: [] },
+    },
+    {
+      method: 'PUT',
+      path: '/public-memories/:id',
+      handler: 'public-memory.update',
+      config: { policies: [] },
+    },
+    {
+      method: 'DELETE',
+      path: '/public-memories/:id',
+      handler: 'public-memory.delete',
+      config: { policies: [] },
+    },
   ],
 };

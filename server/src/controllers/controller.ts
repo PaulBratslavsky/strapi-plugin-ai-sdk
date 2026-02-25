@@ -1,6 +1,8 @@
 import type { Core } from '@strapi/strapi';
 import type { Context } from 'koa';
 import { Readable } from 'node:stream';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { getService, validateBody, validateChatBody, createSSEStream, writeSSE } from '../lib/utils';
 import type { TTSProvider } from '../lib/tts/types';
 
@@ -80,6 +82,30 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     ctx.body = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
   },
 
+  /**
+   * Public chat endpoint - restricted tools, public memories, no admin auth
+   */
+  async publicChat(ctx: Context) {
+    const body = validateChatBody(ctx);
+    if (!body) return;
+
+    const service = getService(strapi, ctx);
+    if (!service) return;
+
+    const result = await service.publicChat(body.messages, { system: body.system });
+
+    const response = result.toUIMessageStreamResponse();
+
+    ctx.status = 200;
+    ctx.set('Content-Type', 'text/event-stream; charset=utf-8');
+    ctx.set('Cache-Control', 'no-cache, no-transform');
+    ctx.set('Connection', 'keep-alive');
+    ctx.set('X-Accel-Buffering', 'no');
+    ctx.set('x-vercel-ai-ui-message-stream', 'v1');
+
+    ctx.body = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
+  },
+
   async tts(ctx: Context) {
     const { text } = ctx.request.body as { text?: string };
     if (!text || typeof text !== 'string') {
@@ -105,6 +131,28 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
       ctx.status = 502;
       ctx.body = { error: 'TTS synthesis failed' };
     }
+  },
+  async serveWidget(ctx: Context) {
+    // __dirname in the bundled output is dist/server/, go up 2 to reach plugin root
+    const pluginRoot = path.resolve(__dirname, '..', '..');
+    const widgetPath = path.join(pluginRoot, 'dist', 'widget', 'widget.js');
+
+    if (!fs.existsSync(widgetPath)) {
+      ctx.status = 404;
+      ctx.type = 'application/javascript';
+      ctx.body = '// Widget not built. Run: npm run build:widget';
+      return;
+    }
+
+    // Cache in memory after first read
+    if (!(controller as any)._widgetCache) {
+      (controller as any)._widgetCache = fs.readFileSync(widgetPath, 'utf-8');
+    }
+
+    ctx.type = 'application/javascript';
+    ctx.set('Cache-Control', 'public, max-age=3600');
+    ctx.set('Access-Control-Allow-Origin', '*');
+    ctx.body = (controller as any)._widgetCache;
   },
 });
 

@@ -12,10 +12,12 @@ export interface ToolDefinition {
   execute: (args: any, strapi: Core.Strapi, context?: ToolContext) => Promise<unknown>;
   /** If true, tool is only available in AI SDK chat, not exposed via MCP */
   internal?: boolean;
+  /** If true, tool is safe for unauthenticated public chat (read-only) */
+  publicSafe?: boolean;
 }
 
 export class ToolRegistry {
-  private tools = new Map<string, ToolDefinition>();
+  private readonly tools = new Map<string, ToolDefinition>();
 
   register(def: ToolDefinition): void {
     this.tools.set(def.name, def);
@@ -43,6 +45,17 @@ export class ToolRegistry {
     const result = new Map<string, ToolDefinition>();
     for (const [name, def] of this.tools) {
       if (!def.internal) {
+        result.set(name, def);
+      }
+    }
+    return result;
+  }
+
+  /** Only tools marked safe for unauthenticated public chat */
+  getPublicSafe(): Map<string, ToolDefinition> {
+    const result = new Map<string, ToolDefinition>();
+    for (const [name, def] of this.tools) {
+      if (def.publicSafe) {
         result.set(name, def);
       }
     }

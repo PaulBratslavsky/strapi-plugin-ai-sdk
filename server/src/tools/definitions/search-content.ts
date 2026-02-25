@@ -6,4 +6,5 @@ export const searchContentTool: ToolDefinition = {
   description: searchContentDescription,
   schema: searchContentSchema,
   execute: async (args, strapi) => searchContent(strapi, args),
+  publicSafe: true,
 };

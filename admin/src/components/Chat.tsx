@@ -183,6 +183,26 @@ export function Chat() {
               <path d="M2 4h12M2 8h12M2 12h8" />
             </svg>
           </ToggleSidebarBtn>
+          <ToggleSidebarBtn
+            onClick={() => navigate(`/plugins/${PLUGIN_ID}/public-memory-store`)}
+            aria-label="Public Memory Store"
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <circle cx="8" cy="8" r="6" />
+              <ellipse cx="8" cy="8" rx="2.5" ry="6" />
+              <path d="M2 8h12" />
+            </svg>
+          </ToggleSidebarBtn>
+          <ToggleSidebarBtn
+            onClick={() => navigate(`/plugins/${PLUGIN_ID}/widget-preview`)}
+            aria-label="Widget Preview"
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <polyline points="4 4 8 2 12 4" />
+              <polyline points="4 4 4 10 8 12 12 10 12 4" />
+              <line x1="8" y1="2" x2="8" y2="12" />
+            </svg>
+          </ToggleSidebarBtn>
           <div style={{ flex: 1 }} />
           <ToggleSidebarBtn
             onClick={() => setMemoryPanelOpen((prev) => !prev)}

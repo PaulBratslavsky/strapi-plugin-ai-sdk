@@ -6,6 +6,7 @@ import { triggerAnimationTool } from './trigger-animation';
 import { sendEmailTool } from './send-email';
 import { saveMemoryTool } from './save-memory';
 import { recallMemoriesTool } from './recall-memories';
+import { recallPublicMemoriesTool } from './recall-public-memories';
 import { findOneContentTool } from './find-one-content';
 import { uploadMediaTool } from './upload-media';
 
@@ -20,4 +21,5 @@ export const builtInTools: ToolDefinition[] = [
   sendEmailTool,
   saveMemoryTool,
   recallMemoriesTool,
+  recallPublicMemoriesTool,
 ];

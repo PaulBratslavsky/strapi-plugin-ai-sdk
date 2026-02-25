@@ -7,6 +7,8 @@ A Strapi v5 plugin that adds an AI-powered chat assistant to the admin panel, ex
 - **Admin Chat UI** with 3D animated avatar, tool call visualization, and voice mode (TTS)
 - **Content Tools** -- the AI can list content types, search content, create/update documents, and send emails
 - **API Endpoints** -- `/ask`, `/ask-stream`, and `/chat` for frontend consumption (compatible with `useChat` from `@ai-sdk/react`)
+- **Public Chat** -- sandboxed public-facing chat with read-only tools and a separate public memory store
+- **Embeddable Widget** -- drop a single `<script>` tag on any website to add an AI chat bubble with 3D avatar
 - **MCP Server** -- expose tools to external AI clients (Claude Desktop, Cursor, etc.) via the Model Context Protocol
 - **Guardrails** -- regex-based input safety middleware that blocks prompt injection, jailbreaks, and destructive commands
 - **Extensible** -- register custom tools, AI providers, and TTS providers at runtime
@@ -53,6 +55,85 @@ In the Strapi admin panel:
 3. Under **Ai-sdk**, enable `ask`, `askStream`, and `chat`
 4. Save
 
+## Embeddable Chat Widget
+
+Add a floating AI chat bubble to **any website** with a single script tag. No npm install, no build step, no React required.
+
+### 1. Enable the public chat endpoint
+
+In the Strapi admin panel:
+
+1. Go to **Settings > Users & Permissions > Roles > Public**
+2. Under **Ai-sdk**, enable `publicChat` and `serveWidget`
+3. Save
+
+### 2. Add the script tag
+
+```html
+<script src="https://your-strapi-url.com/api/ai-sdk/widget.js"></script>
+```
+
+That's it. A floating chat button appears in the bottom-right corner. The widget auto-detects its Strapi URL from the script `src`.
+
+### Configuration via data attributes
+
+```html
+<script
+  src="https://your-strapi-url.com/api/ai-sdk/widget.js"
+  data-api-token="your-api-token"
+  data-system-prompt="You are a helpful assistant for our store."
+></script>
+```
+
+| Attribute | Description |
+|-----------|-------------|
+| `data-api-token` | Optional API token for authenticated requests |
+| `data-system-prompt` | Override the default system prompt |
+
+### How it works
+
+- The widget bundles React, Three.js, and AI SDK internally (~276KB gzipped)
+- It renders inside a Shadow DOM so styles never conflict with your page
+- It uses the `/api/ai-sdk/public-chat` endpoint which only exposes read-only tools
+- The 3D avatar loads from `/models/avatar.glb` on your Strapi server (optional -- falls back to a procedural avatar)
+
+### Public Chat vs Admin Chat
+
+| Feature | Admin Chat (`/chat`) | Public Chat (`/public-chat`) |
+|---------|---------------------|------------------------------|
+| Authentication | Admin JWT required | None (public endpoint) |
+| Tools available | All tools (read + write) | Read-only tools only |
+| Memory store | Per-user private memories | Shared public memories |
+| Content access | All content types | Only configured `allowedContentTypes` |
+
+### Configuring public chat
+
+In `config/plugins.ts`, add `publicChat` with the content types visitors can query:
+
+```typescript
+'ai-sdk': {
+  enabled: true,
+  config: {
+    anthropicApiKey: env('ANTHROPIC_API_KEY'),
+    publicChat: {
+      allowedContentTypes: [
+        'api::article.article',
+        'api::category.category',
+        'api::product.product',
+      ],
+    },
+  },
+},
+```
+
+### Managing public memories
+
+Public memories are facts the AI knows when talking to visitors (e.g., "Our return policy is 30 days"). Manage them from the Strapi admin panel:
+
+1. Go to the **AI SDK** plugin page
+2. Click the globe icon in the chat toolbar
+3. Add, edit, or delete public memories with categories: General, FAQ, Product, Policy
+
 ## Configuration
 
 All plugin settings go in `config/plugins.ts` under the `ai-sdk` key:
@@ -80,6 +161,11 @@ export default ({ env }) => ({
         sessionTimeoutMs: 4 * 60 * 60 * 1000,      // 4 hours (default)
         maxSessions: 100,                            // default
         cleanupInterval: 100,                        // cleanup every N requests
+      },
+
+      // Public Chat (optional)
+      publicChat: {
+        allowedContentTypes: ['api::article.article'],
       },
 
       // Guardrails (optional)
@@ -112,6 +198,8 @@ export default ({ env }) => ({
 | `POST` | `/api/ai-sdk/ask` | Non-streaming text generation |
 | `POST` | `/api/ai-sdk/ask-stream` | Streaming text via Server-Sent Events |
 | `POST` | `/api/ai-sdk/chat` | Chat with AI SDK UI message stream protocol |
+| `POST` | `/api/ai-sdk/public-chat` | Public chat with read-only tools and public memories |
+| `GET` | `/api/ai-sdk/widget.js` | Embeddable chat widget script |
 | `POST` | `/api/ai-sdk/mcp` | MCP JSON-RPC requests |
 | `GET` | `/api/ai-sdk/mcp` | MCP session management |
 | `DELETE` | `/api/ai-sdk/mcp` | MCP session cleanup |
@@ -504,7 +592,8 @@ server/src/
     utils.ts                  # Controller helpers
     tts/                      # TTS provider registry + Typecast
   controllers/
-    controller.ts             # ask, askStream, chat, tts handlers
+    controller.ts             # ask, askStream, chat, publicChat, tts, serveWidget handlers
+    public-memory.ts          # CRUD for public memories
     mcp.ts                    # MCP session management
   services/service.ts         # AI service facade
   routes/
@@ -533,8 +622,15 @@ admin/src/
     useTextReveal.ts          # Word-by-word text reveal
   context/                    # Avatar animation context
 
-tests/                        # E2E integration tests
-docs/                         # Architecture + guardrails + email guides
+widget/src/                     # Embeddable chat widget (separate Vite build)
+  embed.tsx                     # Auto-mount entry (Shadow DOM)
+  react.tsx                     # React component export
+  auto-detect.ts                # Script URL detection
+  styles.css                    # Scoped CSS (no Tailwind)
+  components/                   # Chat + Avatar3D + animations
+
+tests/                          # E2E integration tests
+docs/                           # Architecture + guardrails + email guides
 ```
 
 ## Testing

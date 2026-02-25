@@ -33,6 +33,11 @@ export interface MCPConfig {
 export const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
 export const DEFAULT_MAX_CONVERSATION_MESSAGES = 40;
 
+export interface PublicChatConfig {
+  /** Content type UIDs the public chat is allowed to query (e.g. ['api::article.article']) */
+  allowedContentTypes?: string[];
+}
+
 export interface PluginConfig {
   anthropicApiKey: string;
   provider?: string;
@@ -45,6 +50,7 @@ export interface PluginConfig {
   typecastActorId?: string;
   mcp?: MCPConfig;
   guardrails?: GuardrailConfig;
+  publicChat?: PublicChatConfig;
 }
 
 export interface GenerateOptions {

@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ai_sdk_public_memories",
+  "info": {
+    "singularName": "public-memory",
+    "pluralName": "public-memories",
+    "displayName": "AI Public Memory"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "content": {
+      "type": "text",
+      "required": true
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": ["general", "faq", "product", "policy"],
+      "default": "general"
+    }
+  }
+}

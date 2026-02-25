@@ -23,4 +23,5 @@ export const triggerAnimationTool: ToolDefinition = {
   }),
   execute: async ({ animation }) => ({ triggered: animation, status: 'playing' }),
   internal: true,
+  publicSafe: true,
 };

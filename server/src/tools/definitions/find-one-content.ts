@@ -11,4 +11,5 @@ export const findOneContentTool: ToolDefinition = {
     const sanitizedDoc = await sanitizeOutput(strapi, args.contentType, result.document);
     return { ...result, document: sanitizedDoc };
   },
+  publicSafe: true,
 };

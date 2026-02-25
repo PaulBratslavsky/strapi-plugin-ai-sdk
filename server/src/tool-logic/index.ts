@@ -21,3 +21,6 @@ export type { FindOneContentParams, FindOneContentResult } from './find-one-cont
 
 export { uploadMedia, uploadMediaSchema, uploadMediaDescription } from './upload-media';
 export type { UploadMediaParams, UploadMediaResult } from './upload-media';
+
+export { recallPublicMemories, recallPublicMemoriesSchema, recallPublicMemoriesDescription } from './recall-public-memories';
+export type { RecallPublicMemoriesParams, RecallPublicMemoriesResult } from './recall-public-memories';
