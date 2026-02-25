@@ -119,6 +119,8 @@ export function WidgetPreviewPage() {
     contentSecurityPolicy: {
       directives: {
         'script-src': ["'self'", "'unsafe-inline'"],
+        'connect-src': ["'self'", "blob:"],
+        'img-src': ["'self'", "data:", "blob:"],
         'frame-ancestors': ["'self'", "https://your-frontend.com"],
       },
     },
