@@ -19,6 +19,10 @@ export const writeContentSchema = z.object({
     .enum(['draft', 'published'])
     .optional()
     .describe('Document status. Defaults to draft.'),
+  locale: z
+    .string()
+    .optional()
+    .describe('Locale code for i18n content, e.g. "en" or "fr"'),
 });
 
 export const writeContentDescription =
@@ -30,6 +34,7 @@ export interface WriteContentParams {
   documentId?: string;
   data: Record<string, unknown>;
   status?: 'draft' | 'published';
+  locale?: string;
 }
 
 export interface WriteContentResult {
@@ -45,7 +50,7 @@ export async function writeContent(
   strapi: Core.Strapi,
   params: WriteContentParams
 ): Promise<WriteContentResult> {
-  const { contentType, action, documentId, data, status } = params;
+  const { contentType, action, documentId, data, status, locale } = params;
 
   if (!strapi.contentTypes[contentType as keyof typeof strapi.contentTypes]) {
     throw new Error(`Content type "${contentType}" does not exist.`);
@@ -61,15 +66,29 @@ export async function writeContent(
     const document = await docs.create({
       data,
       ...(status ? { status } : {}),
+      ...(locale ? { locale } : {}),
       populate: '*',
     } as any);
     return { action: 'create', document };
+  }
+
+  // Verify document exists before updating
+  const existing = await docs.findOne({
+    documentId: documentId!,
+    ...(locale ? { locale } : {}),
+  } as any);
+
+  if (!existing) {
+    throw new Error(
+      `Document with ID "${documentId}" not found in "${contentType}".`
+    );
   }
 
   const document = await docs.update({
     documentId: documentId,
     data,
     ...(status ? { status } : {}),
+    ...(locale ? { locale } : {}),
     populate: '*',
   } as any);
   return { action: 'update', document };

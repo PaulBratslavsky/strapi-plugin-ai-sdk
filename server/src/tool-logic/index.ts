@@ -15,3 +15,9 @@ export type { SaveMemoryParams, SaveMemoryResult } from './save-memory';
 
 export { recallMemories, recallMemoriesSchema, recallMemoriesDescription } from './recall-memories';
 export type { RecallMemoriesParams, RecallMemoriesResult } from './recall-memories';
+
+export { findOneContent, findOneContentSchema, findOneContentDescription } from './find-one-content';
+export type { FindOneContentParams, FindOneContentResult } from './find-one-content';
+
+export { uploadMedia, uploadMediaSchema, uploadMediaDescription } from './upload-media';
+export type { UploadMediaParams, UploadMediaResult } from './upload-media';

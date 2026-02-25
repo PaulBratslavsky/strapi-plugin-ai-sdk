@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 const MAX_PAGE_SIZE = 50;
 
+const LARGE_CONTENT_FIELDS = ['content', 'blocks', 'body', 'richText', 'markdown', 'html'];
+
 export const searchContentSchema = z.object({
   contentType: z
     .string()
@@ -20,7 +22,7 @@ export const searchContentSchema = z.object({
   fields: z
     .array(z.string())
     .optional()
-    .describe('Specific fields to return. If omitted, returns all fields.'),
+    .describe('Specific fields to return. If omitted, returns all fields (large content fields stripped unless includeContent is true).'),
   sort: z
     .string()
     .optional()
@@ -31,10 +33,27 @@ export const searchContentSchema = z.object({
     .optional()
     .default(10)
     .describe(`Results per page (max ${MAX_PAGE_SIZE})`),
+  status: z
+    .enum(['draft', 'published'])
+    .optional()
+    .describe('Filter by document status. Published documents have a publishedAt date. If omitted, Strapi returns drafts by default.'),
+  locale: z
+    .string()
+    .optional()
+    .describe('Locale code for i18n content, e.g. "en" or "fr"'),
+  populate: z
+    .union([z.string(), z.array(z.string()), z.record(z.string(), z.unknown())])
+    .optional()
+    .describe('Relations to populate. Defaults to "*" (all). Can be a string, array, or object.'),
+  includeContent: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('When true, includes large content fields (content, blocks, body, etc.) in results. Default false to reduce context size.'),
 });
 
 export const searchContentDescription =
-  'Search and query any Strapi content type. Use listContentTypes first to discover available content types and their fields, then use this tool to query specific collections.';
+  'Search and query any Strapi content type. Use listContentTypes first to discover available content types and their fields, then use this tool to query specific collections. By default, large content fields are stripped from results — set includeContent to true or use fields to get full content.';
 
 export interface SearchContentParams {
   contentType: string;
@@ -44,6 +63,10 @@ export interface SearchContentParams {
   sort?: string;
   page?: number;
   pageSize?: number;
+  status?: 'draft' | 'published';
+  locale?: string;
+  populate?: string | string[] | Record<string, unknown>;
+  includeContent?: boolean;
 }
 
 export interface SearchContentResult {
@@ -55,6 +78,16 @@ export interface SearchContentResult {
   };
 }
 
+function stripLargeFields(obj: Record<string, unknown>): Record<string, unknown> {
+  const stripped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (!LARGE_CONTENT_FIELDS.includes(key)) {
+      stripped[key] = value;
+    }
+  }
+  return stripped;
+}
+
 /**
  * Core logic for searching content.
  * Shared between AI SDK tool and MCP tool.
@@ -63,7 +96,19 @@ export async function searchContent(
   strapi: Core.Strapi,
   params: SearchContentParams
 ): Promise<SearchContentResult> {
-  const { contentType, query, filters, fields, sort, page = 1, pageSize = 10 } = params;
+  const {
+    contentType,
+    query,
+    filters,
+    fields,
+    sort,
+    page = 1,
+    pageSize = 10,
+    status,
+    locale,
+    populate = '*',
+    includeContent = false,
+  } = params;
 
   if (!strapi.contentTypes[contentType as keyof typeof strapi.contentTypes]) {
     throw new Error(`Content type "${contentType}" does not exist.`);
@@ -76,18 +121,28 @@ export async function searchContent(
     ...(filters ? { filters } : {}),
     ...(fields ? { fields } : {}),
     ...(sort ? { sort } : {}),
+    ...(status ? { status } : {}),
+    ...(locale ? { locale } : {}),
     page,
     pageSize: clampedPageSize,
-    populate: '*',
+    populate,
   } as any);
 
   const total = await strapi.documents(contentType as any).count({
     ...(query ? { _q: query } : {}),
     ...(filters ? { filters } : {}),
+    ...(status ? { status } : {}),
+    ...(locale ? { locale } : {}),
   } as any);
 
+  // Strip large content fields unless explicitly requested or fields are specified
+  const shouldStrip = !includeContent && !fields;
+  const processedResults = shouldStrip
+    ? results.map((doc: any) => stripLargeFields(doc))
+    : results;
+
   return {
-    results,
+    results: processedResults,
     pagination: {
       page,
       pageSize: clampedPageSize,

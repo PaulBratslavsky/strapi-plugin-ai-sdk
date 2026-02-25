@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
+  "version": "0.4.0",
   "keywords": [
     "strapi",
     "strapi-plugin",
@@ -41,7 +41,8 @@
     "test:api": "npx tsx tests/ai-sdk.test.ts",
     "test:stream": "node tests/test-stream.mjs",
     "test:chat": "node tests/test-chat.mjs",
-    "test:guardrails": "npx tsx tests/test-guardrails.ts"
+    "test:guardrails": "npx tsx tests/test-guardrails.ts",
+    "test:mcp": "npx tsx tests/mcp.test.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.15",
