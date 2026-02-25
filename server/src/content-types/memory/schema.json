@@ -1,0 +1,19 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ai_sdk_memories",
+  "info": {
+    "singularName": "memory",
+    "pluralName": "memories",
+    "displayName": "AI Memory"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {
+    "content-manager": { "visible": false },
+    "content-type-builder": { "visible": false }
+  },
+  "attributes": {
+    "content": { "type": "text", "required": true },
+    "category": { "type": "enumeration", "enum": ["general", "preference", "personal", "project"], "default": "general" },
+    "adminUserId": { "type": "integer", "required": true }
+  }
+}

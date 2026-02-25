@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PLUGIN_ID } from '../pluginId';
 import { getToken, getBackendURL } from '../utils/auth';
 import { readSSEStream } from '../utils/sse';
@@ -74,15 +74,23 @@ function updateToolOutput(setMessages: SetMessages, assistantId: string, toolCal
 }
 
 export interface UseChatOptions {
+  initialMessages?: Message[];
+  conversationId?: string | null;
   onAnimationTrigger?: (animation: string) => void;
   onStreamStart?: () => void;
   onStreamEnd?: (fullText: string) => void;
 }
 
 export function useChat(options?: UseChatOptions) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(options?.initialMessages ?? []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset messages when conversation changes
+  useEffect(() => {
+    setMessages(options?.initialMessages ?? []);
+    setError(null);
+  }, [options?.conversationId]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -141,5 +149,5 @@ export function useChat(options?: UseChatOptions) {
     setError(null);
   }, []);
 
-  return { messages, sendMessage, clearMessages, isLoading, error };
+  return { messages, setMessages, sendMessage, clearMessages, isLoading, error };
 }

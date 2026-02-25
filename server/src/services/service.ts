@@ -43,12 +43,28 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
      * Chat with messages - returns raw stream for UI message stream response
      * Compatible with AI SDK UI hooks (useChat)
      */
-    async chat(messages: UIMessage[], options?: { system?: string }): Promise<StreamTextRawResult> {
+    async chat(messages: UIMessage[], options?: { system?: string; adminUserId?: number }): Promise<StreamTextRawResult> {
       const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
       const modelMessages = await convertToModelMessages(messages);
-      const tools = createTools(strapi);
+      const tools = createTools(strapi, { adminUserId: options?.adminUserId });
       const toolsDescription = describeTools(tools);
-      const system = composeSystemPrompt(config, toolsDescription, options?.system);
+      let system = composeSystemPrompt(config, toolsDescription, options?.system);
+
+      // Inject user memories into system prompt
+      if (options?.adminUserId) {
+        try {
+          const memories = await strapi.documents('plugin::ai-sdk.memory' as any).findMany({
+            filters: { adminUserId: options.adminUserId },
+            fields: ['content', 'category'],
+          });
+          if (memories.length > 0) {
+            const lines = memories.map((m: any) => `- [${m.category}] ${m.content}`);
+            system += `\n\nUser memories (facts you have saved about this user from previous conversations — use these to personalize your responses):\n${lines.join('\n')}`;
+          }
+        } catch (err) {
+          strapi.log.warn('[ai-sdk] Failed to load user memories:', err);
+        }
+      }
 
       return plugin.aiProvider!.streamRaw({
         messages: modelMessages,

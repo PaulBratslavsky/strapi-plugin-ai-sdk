@@ -62,7 +62,8 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     const service = getService(strapi, ctx);
     if (!service) return;
 
-    const result = await service.chat(body.messages, { system: body.system });
+    const adminUserId = ctx.state?.user?.id;
+    const result = await service.chat(body.messages, { system: body.system, adminUserId });
 
     // Get the response using toUIMessageStreamResponse
     const response = result.toUIMessageStreamResponse();

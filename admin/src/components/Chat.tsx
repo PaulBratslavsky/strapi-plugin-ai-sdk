@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { Box, Typography } from '@strapi/design-system';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useChat } from '../hooks/useChat';
+import { useConversations } from '../hooks/useConversations';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useTextReveal } from '../hooks/useTextReveal';
 import { useAvatarAnimation } from '../context/AvatarAnimationContext';
+import { useMemories } from '../hooks/useMemories';
+import { PLUGIN_ID } from '../pluginId';
 import { AvatarPanel } from './AvatarPanel';
+import { ConversationSidebar } from './ConversationSidebar';
+import { MemoryPanel } from './MemoryPanel';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 
@@ -29,16 +35,53 @@ const ChatWrapper = styled.div`
   min-width: 0;
 `;
 
+const ToggleSidebarBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #dcdce4;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #666687;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #f0f0ff;
+    color: #4945ff;
+    border-color: #4945ff;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const ChatTopBar = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #eaeaef;
+  gap: 8px;
+`;
+
 // --- Component ---
 
 export function Chat() {
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [awaitingAudio, setAwaitingAudio] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fullTextRef = useRef('');
   const voiceRef = useRef(voiceEnabled);
   voiceRef.current = voiceEnabled;
+  const prevIsLoadingRef = useRef(false);
   const { trigger, clearAnimation } = useAvatarAnimation();
   const { visibleText, startReveal, reset: resetReveal } = useTextReveal();
   const { speak, stop: stopAudio } = useAudioPlayer({
@@ -49,7 +92,19 @@ export function Chat() {
     },
     onPlayEnded: () => clearAnimation(),
   });
+  const {
+    conversations,
+    activeId,
+    initialMessages,
+    selectConversation,
+    startNewConversation,
+    saveMessages,
+    removeConversation,
+  } = useConversations();
+  const { memories, removeMemory, refresh: refreshMemories } = useMemories();
   const { messages, sendMessage, isLoading, error } = useChat({
+    initialMessages,
+    conversationId: activeId,
     onAnimationTrigger: trigger,
     onStreamEnd: (fullText) => {
       if (!voiceRef.current) return;
@@ -62,6 +117,15 @@ export function Chat() {
       }
     },
   });
+
+  // Auto-save when assistant response completes (isLoading transitions true -> false)
+  useEffect(() => {
+    if (prevIsLoadingRef.current && !isLoading && messages.length > 0) {
+      saveMessages(messages);
+      refreshMemories();
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading, messages, saveMessages, refreshMemories]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -91,8 +155,45 @@ export function Chat() {
 
   return (
     <ChatLayout>
+      <ConversationSidebar
+        conversations={conversations}
+        activeId={activeId}
+        open={sidebarOpen}
+        onSelect={selectConversation}
+        onNew={startNewConversation}
+        onDelete={removeConversation}
+      />
       <AvatarPanel />
       <ChatWrapper>
+        <ChatTopBar>
+          <ToggleSidebarBtn
+            onClick={() => setSidebarOpen((prev) => !prev)}
+            aria-label={sidebarOpen ? 'Hide conversations' : 'Show conversations'}
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <rect x="1" y="2" width="14" height="12" rx="1.5" />
+              <line x1="5.5" y1="2" x2="5.5" y2="14" />
+            </svg>
+          </ToggleSidebarBtn>
+          <ToggleSidebarBtn
+            onClick={() => navigate(`/plugins/${PLUGIN_ID}/memory-store`)}
+            aria-label="Memory Store"
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M2 4h12M2 8h12M2 12h8" />
+            </svg>
+          </ToggleSidebarBtn>
+          <div style={{ flex: 1 }} />
+          <ToggleSidebarBtn
+            onClick={() => setMemoryPanelOpen((prev) => !prev)}
+            aria-label={memoryPanelOpen ? 'Hide memories' : 'Show memories'}
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <circle cx="8" cy="6" r="4" />
+              <path d="M4 10.5C4 10.5 5 14 8 14s4-3.5 4-3.5" />
+            </svg>
+          </ToggleSidebarBtn>
+        </ChatTopBar>
         <MessageList
           ref={messagesEndRef}
           messages={messages}
@@ -117,6 +218,11 @@ export function Chat() {
           onToggleVoice={handleToggleVoice}
         />
       </ChatWrapper>
+      <MemoryPanel
+        memories={memories}
+        open={memoryPanelOpen}
+        onDelete={removeMemory}
+      />
     </ChatLayout>
   );
 }

@@ -1,11 +1,15 @@
 import type { Core } from '@strapi/strapi';
 import type { z } from 'zod';
 
+export interface ToolContext {
+  adminUserId?: number;
+}
+
 export interface ToolDefinition {
   name: string;
   description: string;
   schema: z.ZodObject<any>;
-  execute: (args: any, strapi: Core.Strapi) => Promise<unknown>;
+  execute: (args: any, strapi: Core.Strapi, context?: ToolContext) => Promise<unknown>;
   /** If true, tool is only available in AI SDK chat, not exposed via MCP */
   internal?: boolean;
 }
