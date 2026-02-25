@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { Box, Typography } from '@strapi/design-system';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useChat } from '../hooks/useChat';
 import { useConversations } from '../hooks/useConversations';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useTextReveal } from '../hooks/useTextReveal';
 import { useAvatarAnimation } from '../context/AvatarAnimationContext';
+import { useMemories } from '../hooks/useMemories';
+import { PLUGIN_ID } from '../pluginId';
 import { AvatarPanel } from './AvatarPanel';
 import { ConversationSidebar } from './ConversationSidebar';
+import { MemoryPanel } from './MemoryPanel';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 
@@ -67,8 +71,10 @@ const ChatTopBar = styled.div`
 // --- Component ---
 
 export function Chat() {
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [awaitingAudio, setAwaitingAudio] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -95,6 +101,7 @@ export function Chat() {
     saveMessages,
     removeConversation,
   } = useConversations();
+  const { memories, removeMemory, refresh: refreshMemories } = useMemories();
   const { messages, sendMessage, isLoading, error } = useChat({
     initialMessages,
     conversationId: activeId,
@@ -115,9 +122,10 @@ export function Chat() {
   useEffect(() => {
     if (prevIsLoadingRef.current && !isLoading && messages.length > 0) {
       saveMessages(messages);
+      refreshMemories();
     }
     prevIsLoadingRef.current = isLoading;
-  }, [isLoading, messages, saveMessages]);
+  }, [isLoading, messages, saveMessages, refreshMemories]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -167,6 +175,24 @@ export function Chat() {
               <line x1="5.5" y1="2" x2="5.5" y2="14" />
             </svg>
           </ToggleSidebarBtn>
+          <ToggleSidebarBtn
+            onClick={() => navigate(`/plugins/${PLUGIN_ID}/memory-store`)}
+            aria-label="Memory Store"
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M2 4h12M2 8h12M2 12h8" />
+            </svg>
+          </ToggleSidebarBtn>
+          <div style={{ flex: 1 }} />
+          <ToggleSidebarBtn
+            onClick={() => setMemoryPanelOpen((prev) => !prev)}
+            aria-label={memoryPanelOpen ? 'Hide memories' : 'Show memories'}
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <circle cx="8" cy="6" r="4" />
+              <path d="M4 10.5C4 10.5 5 14 8 14s4-3.5 4-3.5" />
+            </svg>
+          </ToggleSidebarBtn>
         </ChatTopBar>
         <MessageList
           ref={messagesEndRef}
@@ -192,6 +218,11 @@ export function Chat() {
           onToggleVoice={handleToggleVoice}
         />
       </ChatWrapper>
+      <MemoryPanel
+        memories={memories}
+        open={memoryPanelOpen}
+        onDelete={removeMemory}
+      />
     </ChatLayout>
   );
 }

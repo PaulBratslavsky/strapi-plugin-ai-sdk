@@ -1,6 +1,71 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import type { ToolCall } from '../hooks/useChat';
+
+// --- Helpers ---
+
+function buildContentManagerUrl(contentType: string, documentId?: string): string {
+  const base = `/content-manager/collection-types/${contentType}`;
+  return documentId ? `${base}/${documentId}` : base;
+}
+
+interface ContentLink {
+  label: string;
+  to: string;
+}
+
+function extractContentLinks(toolCall: ToolCall): ContentLink[] {
+  if (toolCall.output === undefined) return [];
+
+  const input = toolCall.input as Record<string, unknown> | undefined;
+  const output = toolCall.output as Record<string, unknown> | undefined;
+  if (!input || !output) return [];
+
+  const contentType = input.contentType as string | undefined;
+  if (!contentType) return [];
+
+  if (toolCall.toolName === 'searchContent') {
+    const results = output.results as Array<Record<string, unknown>> | undefined;
+    const links: ContentLink[] = [
+      { label: contentType, to: buildContentManagerUrl(contentType) },
+    ];
+    if (results && results.length > 0) {
+      for (const entry of results.slice(0, 5)) {
+        const docId = entry.documentId as string | undefined;
+        if (!docId) continue;
+        const title =
+          (entry.title as string) ||
+          (entry.name as string) ||
+          (entry.slug as string) ||
+          docId;
+        links.push({
+          label: String(title),
+          to: buildContentManagerUrl(contentType, docId),
+        });
+      }
+    }
+    return links;
+  }
+
+  if (toolCall.toolName === 'writeContent') {
+    const doc = output.document as Record<string, unknown> | undefined;
+    const docId = doc?.documentId as string | undefined;
+    if (docId) {
+      const title =
+        (doc?.title as string) || (doc?.name as string) || docId;
+      return [
+        {
+          label: `${input.action === 'create' ? 'Created' : 'Updated'}: ${title}`,
+          to: buildContentManagerUrl(contentType, docId),
+        },
+      ];
+    }
+    return [{ label: contentType, to: buildContentManagerUrl(contentType) }];
+  }
+
+  return [];
+}
 
 // --- Styled Components ---
 
@@ -44,12 +109,43 @@ const ToolCallContent = styled.pre`
   word-break: break-word;
 `;
 
+const ContentLinksRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #f6f6f9;
+  border-top: 1px solid #eaeaef;
+`;
+
+const ContentLinkChip = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #dcdce4;
+  color: #4945ff;
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: #c0c0cf;
+  }
+`;
+
 // --- Component ---
 
 export const HIDDEN_TOOLS = new Set(['triggerAnimation']);
 
 export function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) {
   const [expanded, setExpanded] = useState(false);
+  const contentLinks = extractContentLinks(toolCall);
 
   return (
     <ToolCallBox>
@@ -62,6 +158,15 @@ export function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) 
           </span>
         )}
       </ToolCallHeader>
+      {contentLinks.length > 0 && (
+        <ContentLinksRow>
+          {contentLinks.map((link) => (
+            <ContentLinkChip key={link.to} to={link.to}>
+              {link.label}
+            </ContentLinkChip>
+          ))}
+        </ContentLinksRow>
+      )}
       {expanded && (
         <ToolCallContent>
           {toolCall.output === undefined

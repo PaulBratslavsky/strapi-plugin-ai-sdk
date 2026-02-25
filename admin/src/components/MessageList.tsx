@@ -1,5 +1,6 @@
-import { forwardRef } from 'react';
+import { forwardRef, type ComponentProps } from 'react';
 import { Box, Typography } from '@strapi/design-system';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import Markdown from 'react-markdown';
 import type { Message } from '../hooks/useChat';
@@ -116,6 +117,45 @@ const EmptyState = styled.div`
   color: #a5a5ba;
 `;
 
+// --- Content type UID auto-linking ---
+
+const CONTENT_TYPE_UID_RE = /\b(api::\w[\w-]*\.\w[\w-]*)\b/g;
+
+function autoLinkContentTypeUids(text: string): string {
+  return text.replace(
+    CONTENT_TYPE_UID_RE,
+    (match) =>
+      `[${match}](/content-manager/collection-types/${match})`
+  );
+}
+
+function isInternalPath(href: string): boolean {
+  return href.startsWith('/content-manager/');
+}
+
+function MarkdownLink({
+  href,
+  children,
+  ...props
+}: ComponentProps<'a'>) {
+  if (href && isInternalPath(href)) {
+    return (
+      <Link to={href} {...(props as any)}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+      {children}
+    </a>
+  );
+}
+
+const markdownComponents = {
+  a: MarkdownLink,
+} as ComponentProps<typeof Markdown>['components'];
+
 // --- Component ---
 
 interface MessageListProps {
@@ -146,10 +186,15 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
         {messages.map((message, index) => {
           const isLatestAssistant =
             message.role === 'assistant' && index === messages.length - 1;
-          const displayContent =
+          const rawContent =
             voiceEnabled && isLatestAssistant && (awaitingAudio || visibleText)
               ? visibleText
               : message.content;
+
+          const displayContent =
+            message.role === 'assistant' && rawContent
+              ? autoLinkContentTypeUids(rawContent)
+              : rawContent;
 
           return (
             <MessageRow key={message.id} $isUser={message.role === 'user'}>
@@ -163,7 +208,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
                 {message.role === 'user' && message.content}
                 {message.role === 'assistant' && displayContent && (
                   <MarkdownBody $isUser={false}>
-                    <Markdown>{displayContent}</Markdown>
+                    <Markdown components={markdownComponents}>{displayContent}</Markdown>
                   </MarkdownBody>
                 )}
                 {message.role === 'assistant' && !displayContent && (isLoading || awaitingAudio) && (

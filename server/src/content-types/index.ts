@@ -1,3 +1,4 @@
 import conversation from './conversation';
+import memory from './memory';
 
-export default { conversation };
+export default { conversation, memory };

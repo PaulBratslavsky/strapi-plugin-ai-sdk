@@ -48,5 +48,29 @@ export default {
       handler: 'conversation.delete',
       config: { policies: [] },
     },
+    {
+      method: 'GET',
+      path: '/memories',
+      handler: 'memory.find',
+      config: { policies: [] },
+    },
+    {
+      method: 'POST',
+      path: '/memories',
+      handler: 'memory.create',
+      config: { policies: [] },
+    },
+    {
+      method: 'PUT',
+      path: '/memories/:id',
+      handler: 'memory.update',
+      config: { policies: [] },
+    },
+    {
+      method: 'DELETE',
+      path: '/memories/:id',
+      handler: 'memory.delete',
+      config: { policies: [] },
+    },
   ],
 };

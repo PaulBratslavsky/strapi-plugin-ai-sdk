@@ -9,3 +9,9 @@ export type { WriteContentParams, WriteContentResult } from './write-content';
 
 export { sendEmail, sendEmailSchema, sendEmailDescription } from './send-email';
 export type { SendEmailParams, SendEmailResult } from './send-email';
+
+export { saveMemory, saveMemorySchema, saveMemoryDescription } from './save-memory';
+export type { SaveMemoryParams, SaveMemoryResult } from './save-memory';
+
+export { recallMemories, recallMemoriesSchema, recallMemoriesDescription } from './recall-memories';
+export type { RecallMemoriesParams, RecallMemoriesResult } from './recall-memories';

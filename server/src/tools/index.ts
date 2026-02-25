@@ -2,8 +2,9 @@ import type { Core } from '@strapi/strapi';
 import type { ToolSet } from 'ai';
 import { tool, zodSchema } from 'ai';
 import type { PluginInstance } from '../lib/types';
+import type { ToolContext } from '../lib/tool-registry';
 
-export function createTools(strapi: Core.Strapi): ToolSet {
+export function createTools(strapi: Core.Strapi, context?: ToolContext): ToolSet {
   const plugin = strapi.plugin('ai-sdk') as unknown as PluginInstance;
   const registry = plugin.toolRegistry;
 
@@ -16,7 +17,7 @@ export function createTools(strapi: Core.Strapi): ToolSet {
     tools[name] = tool({
       description: def.description,
       inputSchema: zodSchema(def.schema) as any,
-      execute: async (args: any) => def.execute(args, strapi),
+      execute: async (args: any) => def.execute(args, strapi, context),
     });
   }
 

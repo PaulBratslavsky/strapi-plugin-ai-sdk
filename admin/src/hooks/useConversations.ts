@@ -63,6 +63,7 @@ export function useConversations() {
           );
         } else {
           const created = await createConversation({ title, messages });
+          setInitialMessages(messages);
           setActiveId(created.documentId);
           setConversations((prev) => [
             {

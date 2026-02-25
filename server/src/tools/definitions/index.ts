@@ -4,6 +4,8 @@ import { searchContentTool } from './search-content';
 import { writeContentTool } from './write-content';
 import { triggerAnimationTool } from './trigger-animation';
 import { sendEmailTool } from './send-email';
+import { saveMemoryTool } from './save-memory';
+import { recallMemoriesTool } from './recall-memories';
 
 /** All built-in tool definitions. Add new tools here. */
 export const builtInTools: ToolDefinition[] = [
@@ -12,4 +14,6 @@ export const builtInTools: ToolDefinition[] = [
   writeContentTool,
   triggerAnimationTool,
   sendEmailTool,
+  saveMemoryTool,
+  recallMemoriesTool,
 ];
