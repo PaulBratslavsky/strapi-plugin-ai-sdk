@@ -3,6 +3,7 @@ import type { UIMessage } from 'ai';
 import { convertToModelMessages, stepCountIs } from 'ai';
 import type { StreamTextRawResult } from '../lib/ai-provider';
 import type { PluginConfig, PluginInstance } from '../lib/types';
+import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_CONVERSATION_MESSAGES } from '../lib/types';
 import { createTools, describeTools } from '../tools';
 
 const DEFAULT_PREAMBLE =
@@ -45,7 +46,15 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
      */
     async chat(messages: UIMessage[], options?: { system?: string; adminUserId?: number }): Promise<StreamTextRawResult> {
       const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
-      const modelMessages = await convertToModelMessages(messages);
+      const maxMessages = config?.maxConversationMessages ?? DEFAULT_MAX_CONVERSATION_MESSAGES;
+      const maxOutputTokens = config?.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
+
+      // Truncate conversation history to limit input tokens
+      const trimmedMessages = messages.length > maxMessages
+        ? messages.slice(-maxMessages)
+        : messages;
+
+      const modelMessages = await convertToModelMessages(trimmedMessages);
       const tools = createTools(strapi, { adminUserId: options?.adminUserId });
       const toolsDescription = describeTools(tools);
       let system = composeSystemPrompt(config, toolsDescription, options?.system);
@@ -70,6 +79,7 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
         messages: modelMessages,
         system,
         tools,
+        maxOutputTokens,
         stopWhen: stepCountIs(6),
       });
     },

@@ -30,12 +30,17 @@ export interface MCPConfig {
   cleanupInterval?: number;
 }
 
+export const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
+export const DEFAULT_MAX_CONVERSATION_MESSAGES = 40;
+
 export interface PluginConfig {
   anthropicApiKey: string;
   provider?: string;
   chatModel?: string;
   baseURL?: string;
   systemPrompt?: string;
+  maxOutputTokens?: number;
+  maxConversationMessages?: number;
   typecastApiKey?: string;
   typecastActorId?: string;
   mcp?: MCPConfig;

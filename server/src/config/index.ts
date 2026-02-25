@@ -5,6 +5,8 @@ export default {
     chatModel: 'claude-sonnet-4-20250514',
     baseURL: undefined,
     systemPrompt: '',
+    maxOutputTokens: 8192,
+    maxConversationMessages: 40,
     mcp: {
       sessionTimeoutMs: 4 * 60 * 60 * 1000,
       maxSessions: 100,
