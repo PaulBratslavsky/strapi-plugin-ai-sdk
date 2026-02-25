@@ -99,6 +99,45 @@ export function WidgetPreviewPage() {
 
         <Box marginTop={6} padding={6} background="neutral0" shadow="filterShadow" hasRadius>
           <Typography variant="beta" tag="h2">
+            Production Setup
+          </Typography>
+          <Typography variant="omega" textColor="neutral600" tag="p" style={{ marginTop: '8px' }}>
+            If the widget is embedded on a different domain, update your Strapi project's{' '}
+            <strong>config/middlewares.ts</strong> to allow cross-origin access:
+          </Typography>
+          <Box
+            marginTop={4}
+            padding={4}
+            background="neutral100"
+            hasRadius
+            style={{ fontFamily: 'monospace', fontSize: '13px', whiteSpace: 'pre', overflowX: 'auto', lineHeight: '1.5' }}
+          >
+{`// config/middlewares.ts
+{
+  name: 'strapi::security',
+  config: {
+    contentSecurityPolicy: {
+      directives: {
+        'script-src': ["'self'", "'unsafe-inline'"],
+        'frame-ancestors': ["'self'", "https://your-frontend.com"],
+      },
+    },
+  },
+},
+{
+  name: 'strapi::cors',
+  config: {
+    origin: ['https://your-frontend.com'],
+  },
+},`}
+          </Box>
+          <Typography variant="pi" textColor="neutral500" tag="p" style={{ marginTop: '8px' }}>
+            Replace <strong>https://your-frontend.com</strong> with the domain(s) where the widget will be embedded.
+          </Typography>
+        </Box>
+
+        <Box marginTop={6} padding={6} background="neutral0" shadow="filterShadow" hasRadius>
+          <Typography variant="beta" tag="h2">
             Development
           </Typography>
           <Typography variant="omega" textColor="neutral600" tag="p" style={{ marginTop: '8px' }}>
