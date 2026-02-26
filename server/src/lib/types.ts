@@ -31,11 +31,21 @@ export interface MCPConfig {
 }
 
 export const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
-export const DEFAULT_MAX_CONVERSATION_MESSAGES = 40;
+export const DEFAULT_MAX_CONVERSATION_MESSAGES = 15;
+export const DEFAULT_PUBLIC_MAX_CONVERSATION_MESSAGES = 10;
+export const DEFAULT_MAX_STEPS = 10;
+export const DEFAULT_PUBLIC_MAX_STEPS = 5;
+export const DEFAULT_PUBLIC_CHAT_MODEL = 'claude-haiku-4-5-20251001';
 
 export interface PublicChatConfig {
   /** Content type UIDs the public chat is allowed to query (e.g. ['api::article.article']) */
   allowedContentTypes?: string[];
+  /** Model to use for public chat (defaults to Haiku for lower cost & higher rate limits) */
+  chatModel?: string;
+  /** Max conversation messages for public chat (defaults to 10) */
+  maxConversationMessages?: number;
+  /** Max tool call steps for public chat (defaults to 2) */
+  maxSteps?: number;
 }
 
 export interface PluginConfig {
@@ -46,6 +56,8 @@ export interface PluginConfig {
   systemPrompt?: string;
   maxOutputTokens?: number;
   maxConversationMessages?: number;
+  /** Max tool call steps for admin chat (defaults to 3) */
+  maxSteps?: number;
   typecastApiKey?: string;
   typecastActorId?: string;
   mcp?: MCPConfig;
@@ -59,6 +71,10 @@ export interface GenerateOptions {
   maxOutputTokens?: number;
   tools?: ToolSet;
   stopWhen?: AnyStopCondition;
+  /** Max tool call round-trips before stopping */
+  maxSteps?: number;
+  /** Override model for this request (e.g. use Haiku for public chat) */
+  modelId?: string;
 }
 
 export interface PromptInput extends GenerateOptions {

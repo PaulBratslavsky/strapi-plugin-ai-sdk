@@ -228,6 +228,12 @@
   background: none;
   padding: 0;
 }
+.sc-prose img {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 4px;
+}
 .sc-prose a { color: #6d28d9; }
 .sc-prose strong { font-weight: 600; }
 .sc-prose h1, .sc-prose h2, .sc-prose h3 {

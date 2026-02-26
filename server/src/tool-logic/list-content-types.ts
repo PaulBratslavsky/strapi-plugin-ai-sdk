@@ -131,11 +131,17 @@ function parseComponent(uid: string, component: unknown): ComponentSummary {
   };
 }
 
+// Cache — content types don't change at runtime so we compute once
+let cachedResult: ListContentTypesResult | null = null;
+
 /**
  * Core logic for listing content types and components.
  * Shared between AI SDK tool and MCP tool.
+ * Results are cached since content types are static after server startup.
  */
 export async function listContentTypes(strapi: Core.Strapi): Promise<ListContentTypesResult> {
+  if (cachedResult) return cachedResult;
+
   const contentTypes = Object.entries(strapi.contentTypes)
     .filter(([uid]) => isApiContentType(uid))
     .map(([uid, ct]) => parseContentType(uid, ct, strapi.contentTypes))
@@ -145,5 +151,6 @@ export async function listContentTypes(strapi: Core.Strapi): Promise<ListContent
     .map(([uid, comp]) => parseComponent(uid, comp))
     .sort((a, b) => a.category.localeCompare(b.category) || a.displayName.localeCompare(b.displayName));
 
-  return { contentTypes, components };
+  cachedResult = { contentTypes, components };
+  return cachedResult;
 }

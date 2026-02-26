@@ -28,7 +28,7 @@ import {
 type ProviderCreator = (config: { apiKey: string; baseURL?: string }) => (modelId: string) => LanguageModel;
 
 export class AIProvider {
-  private static providerRegistry = new Map<string, ProviderCreator>();
+  private static readonly providerRegistry = new Map<string, ProviderCreator>();
 
   private modelFactory: ((modelId: string) => LanguageModel) | null = null;
   private model: string = DEFAULT_MODEL;
@@ -71,16 +71,16 @@ export class AIProvider {
     return true;
   }
 
-  private getLanguageModel(): LanguageModel {
+  private getLanguageModel(modelId?: string): LanguageModel {
     if (!this.modelFactory) {
       throw new Error('AIProvider not initialized');
     }
-    return this.modelFactory(this.model);
+    return this.modelFactory(modelId ?? this.model);
   }
 
   private buildParams(input: GenerateInput) {
     const base = {
-      model: this.getLanguageModel(),
+      model: this.getLanguageModel(input.modelId),
       system: input.system,
       temperature: input.temperature ?? DEFAULT_TEMPERATURE,
       maxOutputTokens: input.maxOutputTokens,

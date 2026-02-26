@@ -47,7 +47,7 @@ const CloseIcon = () => (
   </svg>
 )
 
-export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: StrapiChatProps) {
+export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: Readonly<StrapiChatProps>) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -96,7 +96,7 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: StrapiChatProp
 
       {/* Overlay */}
       {open && (
-        <div className="sc-overlay" onClick={() => setOpen(false)} />
+        <button type="button" className="sc-overlay" onClick={() => setOpen(false)} aria-label="Close chat" />
       )}
 
       {/* Side panel */}
@@ -109,7 +109,7 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: StrapiChatProp
           <div className="sc-header-info">
             <h2 className="sc-header-title">AI Assistant</h2>
             <p className="sc-header-subtitle">
-              {messages.length} message{messages.length !== 1 ? 's' : ''}
+              {messages.length} message{messages.length === 1 ? '' : 's'}
             </p>
           </div>
           <button
@@ -146,22 +146,22 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: StrapiChatProp
                   {isUser ? 'U' : 'AI'}
                 </div>
                 <div className={`sc-bubble ${isUser ? 'sc-bubble--user' : 'sc-bubble--assistant'}`}>
-                  {!isUser ? (
+                  {isUser ? (
+                    <p>{text}</p>
+                  ) : (
                     <div className="sc-prose">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {text}
                       </ReactMarkdown>
                     </div>
-                  ) : (
-                    <p>{text}</p>
                   )}
                 </div>
               </div>
             )
           })}
 
-          {/* Loading indicator */}
-          {status === 'submitted' && (
+          {/* Loading / thinking indicator */}
+          {(status === 'submitted' || status === 'streaming') && (
             <div className="sc-loading-row">
               <div className="sc-msg-avatar sc-msg-avatar--assistant">AI</div>
               <div className="sc-loading-bubble">

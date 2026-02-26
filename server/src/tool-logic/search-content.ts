@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const MAX_PAGE_SIZE = 50;
 
-const LARGE_CONTENT_FIELDS = ['content', 'blocks', 'body', 'richText', 'markdown', 'html'];
+const LARGE_CONTENT_FIELDS = new Set(['content', 'blocks', 'body', 'richText', 'markdown', 'html']);
 
 export const searchContentSchema = z.object({
   contentType: z
@@ -53,7 +53,7 @@ export const searchContentSchema = z.object({
 });
 
 export const searchContentDescription =
-  'Search and query any Strapi content type. Use listContentTypes first to discover available content types and their fields, then use this tool to query specific collections. By default, large content fields are stripped from results — set includeContent to true or use fields to get full content.';
+  'Search and query any Strapi content type. Use listContentTypes first to discover available content types and their fields, then use this tool to query specific collections. Use sort (e.g. "createdAt:desc") and pageSize: 1 to get the latest entry. By default, large content fields are stripped from results — set includeContent to true or use fields to get full content.';
 
 export interface SearchContentParams {
   contentType: string;
@@ -81,9 +81,10 @@ export interface SearchContentResult {
 function stripLargeFields(obj: Record<string, unknown>): Record<string, unknown> {
   const stripped: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (!LARGE_CONTENT_FIELDS.includes(key)) {
-      stripped[key] = value;
+    if (LARGE_CONTENT_FIELDS.has(key)) {
+      continue;
     }
+    stripped[key] = value;
   }
   return stripped;
 }

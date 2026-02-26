@@ -6,7 +6,8 @@ export default {
     baseURL: undefined,
     systemPrompt: '',
     maxOutputTokens: 8192,
-    maxConversationMessages: 40,
+    maxConversationMessages: 15,
+    maxSteps: 10,
     mcp: {
       sessionTimeoutMs: 4 * 60 * 60 * 1000,
       maxSessions: 100,
@@ -19,6 +20,12 @@ export default {
     publicChat: {
       /** Content type UIDs the public chat is allowed to query (e.g. ['api::article.article']) */
       allowedContentTypes: [] as string[],
+      /** Model for public chat — defaults to Haiku for lower cost & higher rate limits */
+      chatModel: 'claude-haiku-4-5-20251001',
+      /** Max conversation messages for public chat */
+      maxConversationMessages: 10,
+      /** Max tool call steps for public chat */
+      maxSteps: 5,
     },
   },
   validator(config: unknown) {

@@ -3,11 +3,18 @@ import type { UIMessage } from 'ai';
 import { convertToModelMessages, stepCountIs } from 'ai';
 import type { StreamTextRawResult } from '../lib/ai-provider';
 import type { PluginConfig, PluginInstance } from '../lib/types';
-import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_CONVERSATION_MESSAGES } from '../lib/types';
+import {
+  DEFAULT_MAX_OUTPUT_TOKENS,
+  DEFAULT_MAX_CONVERSATION_MESSAGES,
+  DEFAULT_PUBLIC_MAX_CONVERSATION_MESSAGES,
+  DEFAULT_MAX_STEPS,
+  DEFAULT_PUBLIC_MAX_STEPS,
+  DEFAULT_PUBLIC_CHAT_MODEL,
+} from '../lib/types';
 import { createTools, createPublicTools, describeTools } from '../tools';
 
 const DEFAULT_PREAMBLE =
-  'You are a Strapi CMS assistant. Use your tools to fulfill user requests. When asked to create or update content, use the appropriate tool — do not tell the user you cannot.';
+  'You are a Strapi CMS assistant. Use your tools to fulfill user requests. When asked to create or update content, use the appropriate tool — do not tell the user you cannot. When performing bulk operations (e.g. publish multiple items), call multiple tools in parallel in a single step rather than one at a time.';
 
 const DEFAULT_PUBLIC_PREAMBLE =
   'You are a helpful public assistant for this website. Use your tools to answer questions about the site content. You cannot modify any content or perform administrative actions.';
@@ -51,6 +58,7 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
       const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
       const maxMessages = config?.maxConversationMessages ?? DEFAULT_MAX_CONVERSATION_MESSAGES;
       const maxOutputTokens = config?.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
+      const maxSteps = config?.maxSteps ?? DEFAULT_MAX_STEPS;
 
       // Truncate conversation history to limit input tokens
       const trimmedMessages = messages.length > maxMessages
@@ -83,7 +91,7 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
         system,
         tools,
         maxOutputTokens,
-        stopWhen: stepCountIs(6),
+        stopWhen: stepCountIs(maxSteps),
       });
     },
 
@@ -92,9 +100,12 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
      */
     async publicChat(messages: UIMessage[], options?: { system?: string }): Promise<StreamTextRawResult> {
       const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
-      const maxMessages = config?.maxConversationMessages ?? DEFAULT_MAX_CONVERSATION_MESSAGES;
+      const publicConfig = config?.publicChat;
+      const maxMessages = publicConfig?.maxConversationMessages ?? DEFAULT_PUBLIC_MAX_CONVERSATION_MESSAGES;
       const maxOutputTokens = config?.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
-      const allowedContentTypes = config?.publicChat?.allowedContentTypes ?? [];
+      const maxSteps = publicConfig?.maxSteps ?? DEFAULT_PUBLIC_MAX_STEPS;
+      const publicModel = publicConfig?.chatModel ?? DEFAULT_PUBLIC_CHAT_MODEL;
+      const allowedContentTypes = publicConfig?.allowedContentTypes ?? [];
 
       const trimmedMessages = messages.length > maxMessages
         ? messages.slice(-maxMessages)
@@ -124,7 +135,8 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
         system,
         tools,
         maxOutputTokens,
-        stopWhen: stepCountIs(6),
+        modelId: publicModel,
+        stopWhen: stepCountIs(maxSteps),
       });
     },
 
