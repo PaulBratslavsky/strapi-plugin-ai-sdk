@@ -44,19 +44,19 @@ export function createPublicTools(strapi: Core.Strapi, allowedContentTypes: stri
   const tools: ToolSet = {};
 
   for (const [name, def] of registry.getPublicSafe()) {
-    if (CONTENT_TOOLS.has(name) && allowed.size > 0) {
+    if (CONTENT_TOOLS.has(name)) {
       // Wrap content tools to enforce allowed content types
       tools[name] = tool({
         description: def.description,
         inputSchema: zodSchema(def.schema) as any,
         execute: async (args: any) => {
-          if (args.contentType && !allowed.has(args.contentType)) {
+          if (!args.contentType || !allowed.has(args.contentType)) {
             return { error: `Content type "${args.contentType}" is not available in public chat.` };
           }
           return def.execute(args, strapi);
         },
       });
-    } else if (name === 'listContentTypes' && allowed.size > 0) {
+    } else if (name === 'listContentTypes') {
       // Filter listContentTypes to only show allowed types
       tools[name] = tool({
         description: def.description,
