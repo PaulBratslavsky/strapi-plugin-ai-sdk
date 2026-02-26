@@ -9,7 +9,7 @@ function toSnakeCase(str: string): string {
 
 /**
  * Create an MCP server instance configured with public tools from the registry.
- * Internal tools (e.g. triggerAnimation) are excluded.
+ * Internal tools are excluded.
  */
 export function createMcpServer(strapi: Core.Strapi): McpServer {
   const plugin = strapi.plugin('ai-sdk') as unknown as PluginInstance;

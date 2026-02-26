@@ -4,12 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useChat } from '../hooks/useChat';
 import { useConversations } from '../hooks/useConversations';
-import { useAudioPlayer } from '../hooks/useAudioPlayer';
-import { useTextReveal } from '../hooks/useTextReveal';
-import { useAvatarAnimation } from '../context/AvatarAnimationContext';
 import { useMemories } from '../hooks/useMemories';
 import { PLUGIN_ID } from '../pluginId';
-import { AvatarPanel } from './AvatarPanel';
 import { ConversationSidebar } from './ConversationSidebar';
 import { MemoryPanel } from './MemoryPanel';
 import { MessageList } from './MessageList';
@@ -49,7 +45,7 @@ const ToggleSidebarBtn = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background: #f0f0ff;
+    background: #f0f0f5;
     color: #4945ff;
     border-color: #4945ff;
   }
@@ -75,23 +71,8 @@ export function Chat() {
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [awaitingAudio, setAwaitingAudio] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fullTextRef = useRef('');
-  const voiceRef = useRef(voiceEnabled);
-  voiceRef.current = voiceEnabled;
   const prevIsLoadingRef = useRef(false);
-  const { trigger, clearAnimation } = useAvatarAnimation();
-  const { visibleText, startReveal, reset: resetReveal } = useTextReveal();
-  const { speak, stop: stopAudio } = useAudioPlayer({
-    onPlayStart: (duration) => {
-      trigger('speak');
-      startReveal(fullTextRef.current, duration);
-      setAwaitingAudio(false);
-    },
-    onPlayEnded: () => clearAnimation(),
-  });
   const {
     conversations,
     activeId,
@@ -105,17 +86,6 @@ export function Chat() {
   const { messages, sendMessage, isLoading, error } = useChat({
     initialMessages,
     conversationId: activeId,
-    onAnimationTrigger: trigger,
-    onStreamEnd: (fullText) => {
-      if (!voiceRef.current) return;
-      fullTextRef.current = fullText;
-      if (!fullText) {
-        setAwaitingAudio(false);
-        clearAnimation();
-      } else {
-        speak(fullText);
-      }
-    },
   });
 
   // Auto-save when assistant response completes (isLoading transitions true -> false)
@@ -129,29 +99,13 @@ export function Chat() {
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
-    if (voiceEnabled) {
-      fullTextRef.current = '';
-      resetReveal();
-      setAwaitingAudio(true);
-    }
     sendMessage(input);
     setInput('');
   };
 
-  const handleToggleVoice = () => {
-    const next = !voiceEnabled;
-    setVoiceEnabled(next);
-    if (!next) {
-      stopAudio();
-      resetReveal();
-      setAwaitingAudio(false);
-      clearAnimation();
-    }
-  };
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, visibleText]);
+  }, [messages]);
 
   return (
     <ChatLayout>
@@ -163,7 +117,6 @@ export function Chat() {
         onNew={startNewConversation}
         onDelete={removeConversation}
       />
-      <AvatarPanel />
       <ChatWrapper>
         <ChatTopBar>
           <ToggleSidebarBtn
@@ -218,9 +171,6 @@ export function Chat() {
           ref={messagesEndRef}
           messages={messages}
           isLoading={isLoading}
-          awaitingAudio={awaitingAudio}
-          voiceEnabled={voiceEnabled}
-          visibleText={visibleText}
         />
 
         {error && (
@@ -232,10 +182,8 @@ export function Chat() {
         <ChatInput
           input={input}
           isLoading={isLoading}
-          voiceEnabled={voiceEnabled}
           onInputChange={setInput}
           onSend={handleSend}
-          onToggleVoice={handleToggleVoice}
         />
       </ChatWrapper>
       <MemoryPanel

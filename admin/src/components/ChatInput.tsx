@@ -1,5 +1,5 @@
 import { Box, Button, TextInput } from '@strapi/design-system';
-import { Sparkle, VolumeUp, VolumeMute } from '@strapi/icons';
+import { Sparkle } from '@strapi/icons';
 import styled from 'styled-components';
 
 // --- Styled Components ---
@@ -12,49 +12,20 @@ const InputArea = styled.div`
   border-top: 1px solid #eaeaef;
 `;
 
-const VoiceToggle = styled.button<{ $active: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid ${({ $active }) => ($active ? '#4945ff' : '#dcdce4')};
-  background: ${({ $active }) => ($active ? '#f0f0ff' : '#ffffff')};
-  color: ${({ $active }) => ($active ? '#4945ff' : '#a5a5ba')};
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-
-  &:hover {
-    border-color: #4945ff;
-    color: #4945ff;
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-`;
-
 // --- Component ---
 
 interface ChatInputProps {
   input: string;
   isLoading: boolean;
-  voiceEnabled: boolean;
   onInputChange: (value: string) => void;
   onSend: () => void;
-  onToggleVoice: () => void;
 }
 
 export function ChatInput({
   input,
   isLoading,
-  voiceEnabled,
   onInputChange,
   onSend,
-  onToggleVoice,
 }: ChatInputProps) {
   return (
     <form
@@ -74,14 +45,6 @@ export function ChatInput({
             }
           />
         </Box>
-        <VoiceToggle
-          type="button"
-          onClick={onToggleVoice}
-          title={voiceEnabled ? 'Disable voice' : 'Enable voice'}
-          $active={voiceEnabled}
-        >
-          {voiceEnabled ? <VolumeUp /> : <VolumeMute />}
-        </VoiceToggle>
         <Button
           type="submit"
           disabled={isLoading || !input.trim()}

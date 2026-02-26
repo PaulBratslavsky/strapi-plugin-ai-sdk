@@ -1,7 +1,6 @@
 import type { Core } from '@strapi/strapi';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createMcpServer } from './mcp/server';
-import { createTTSRegistry } from './lib/tts';
 import { AIProvider } from './lib/ai-provider';
 import { ToolRegistry } from './lib/tool-registry';
 import { builtInTools } from './tools/definitions';
@@ -40,18 +39,6 @@ const bootstrap = ({ strapi }: { strapi: Core.Strapi }) => {
   // Store the MCP server factory and session map on the plugin instance
   plugin.createMcpServer = () => createMcpServer(strapi);
   plugin.mcpSessions = new Map();
-
-  // Initialize TTS registry and provider if configured
-  const ttsRegistry = createTTSRegistry();
-  plugin.ttsRegistry = ttsRegistry;
-
-  if (config.typecastApiKey && config.typecastActorId) {
-    plugin.ttsProvider = ttsRegistry.create('typecast', {
-      apiKey: config.typecastApiKey,
-      actorId: config.typecastActorId,
-    });
-    strapi.log.info(`[${PLUGIN_ID}] TTS provider initialized (typecast)`);
-  }
 
   strapi.log.info(`[${PLUGIN_ID}] MCP endpoint available at: /api/${PLUGIN_ID}/mcp`);
 };

@@ -3,7 +3,6 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Avatar3D } from './avatar-3d'
 
 interface StrapiChatProps {
   strapiUrl: string
@@ -18,20 +17,6 @@ function getMessageText(message: { parts: Array<{ type: string; text?: string }>
     .join('')
 }
 
-function getTriggeredAnimation(messages: Array<{ role: string; parts: Array<any> }>): string | null {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]
-    if (msg.role !== 'assistant') continue
-    for (let j = msg.parts.length - 1; j >= 0; j--) {
-      const part = msg.parts[j]
-      if (part.type === 'tool-triggerAnimation' || (part.type === 'dynamic-tool' && part.toolName === 'triggerAnimation')) {
-        return (part.input as any)?.animation ?? null
-      }
-    }
-  }
-  return null
-}
-
 // Inline SVG icons to avoid lucide-react dependency
 const SendIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -44,6 +29,12 @@ const CloseIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20 }}>
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
+
+const SparkleIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '60%', height: '60%' }}>
+    <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" />
   </svg>
 )
 
@@ -66,9 +57,6 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: Readonly<Strap
 
   const isStreaming = status === 'streaming' || status === 'submitted'
 
-  const triggeredAnimation = getTriggeredAnimation(messages)
-  const headerAnimation = triggeredAnimation || (isStreaming ? 'speak' : 'idle')
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, status])
@@ -81,8 +69,6 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: Readonly<Strap
     sendMessage({ text })
   }
 
-  const modelUrl = `${strapiUrl}/models/avatar.glb`
-
   return (
     <>
       {/* Floating trigger */}
@@ -91,7 +77,7 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: Readonly<Strap
         onClick={() => setOpen(true)}
         aria-label="Open chat"
       >
-        <Avatar3D animation="idle" modelUrl={modelUrl} />
+        <SparkleIcon />
       </button>
 
       {/* Overlay */}
@@ -104,7 +90,7 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: Readonly<Strap
         {/* Header */}
         <div className="sc-header">
           <div className="sc-header-avatar">
-            <Avatar3D animation={headerAnimation} modelUrl={modelUrl} />
+            <SparkleIcon />
           </div>
           <div className="sc-header-info">
             <h2 className="sc-header-title">AI Assistant</h2>
@@ -126,7 +112,7 @@ export function StrapiChat({ strapiUrl, apiToken, systemPrompt }: Readonly<Strap
           {messages.length === 0 && (
             <div className="sc-welcome">
               <div className="sc-welcome-avatar">
-                <Avatar3D animation="wave" modelUrl={modelUrl} />
+                <SparkleIcon />
               </div>
               <p className="sc-welcome-title">Hey there!</p>
               <p className="sc-welcome-subtitle">Ask me anything about the site.</p>

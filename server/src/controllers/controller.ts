@@ -4,7 +4,6 @@ import { Readable } from 'node:stream';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getService, validateBody, validateChatBody, createSSEStream, writeSSE } from '../lib/utils';
-import type { TTSProvider } from '../lib/tts/types';
 
 const PLUGIN_ID = 'ai-sdk';
 
@@ -106,32 +105,6 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     ctx.body = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
   },
 
-  async tts(ctx: Context) {
-    const { text } = ctx.request.body as { text?: string };
-    if (!text || typeof text !== 'string') {
-      ctx.status = 400;
-      ctx.body = { error: 'Missing "text" field' };
-      return;
-    }
-
-    const plugin = strapi.plugin(PLUGIN_ID) as unknown as { ttsProvider?: TTSProvider };
-    if (!plugin.ttsProvider) {
-      ctx.status = 501;
-      ctx.body = { error: 'TTS not configured' };
-      return;
-    }
-
-    try {
-      const buffer = await plugin.ttsProvider.synthesize(text);
-      ctx.status = 200;
-      ctx.set('Content-Type', 'audio/wav');
-      ctx.body = buffer;
-    } catch (error) {
-      strapi.log.error('[ai-sdk] TTS error:', error);
-      ctx.status = 502;
-      ctx.body = { error: 'TTS synthesis failed' };
-    }
-  },
   async serveWidget(ctx: Context) {
     // __dirname in the bundled output is dist/server/, go up 2 to reach plugin root
     const pluginRoot = path.resolve(__dirname, '..', '..');

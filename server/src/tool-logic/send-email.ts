@@ -31,6 +31,7 @@ export async function sendEmail(
   params: SendEmailParams
 ): Promise<SendEmailResult> {
   const emailPlugin = strapi.plugin('email');
+  
   if (!emailPlugin) {
     return {
       success: false,

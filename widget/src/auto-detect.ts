@@ -10,7 +10,7 @@ export function detectStrapiUrl(): string {
   if (el?.src) {
     return new URL(el.src).origin
   }
-  return window.location.origin
+  return globalThis.location.origin
 }
 
 export function getScriptData(key: string): string | undefined {

@@ -3,9 +3,9 @@ import { Box, Typography } from '@strapi/design-system';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import Markdown from 'react-markdown';
+import { Sparkle } from '@strapi/icons';
 import type { Message } from '../hooks/useChat';
 import { ToolCallDisplay, HIDDEN_TOOLS } from './ToolCallDisplay';
-import waifuAvatar from './waifu-avatar.png';
 
 // --- Styled Components ---
 
@@ -27,12 +27,21 @@ const MessageRow = styled.div<{ $isUser: boolean }>`
   max-width: 80%;
 `;
 
-const Avatar = styled.img`
-  width: 104px;
-  height: 104px;
+const SparkleIcon = styled.div`
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  object-fit: cover;
+  background: #4945ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: #ffffff;
+  }
 `;
 
 const MessageBubble = styled.div<{ $isUser: boolean }>`
@@ -161,13 +170,10 @@ const markdownComponents = {
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
-  awaitingAudio: boolean;
-  voiceEnabled: boolean;
-  visibleText: string;
 }
 
 export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
-  function MessageList({ messages, isLoading, awaitingAudio, voiceEnabled, visibleText }, ref) {
+  function MessageList({ messages, isLoading }, ref) {
     return (
       <MessagesArea>
         {messages.length === 0 && (
@@ -183,23 +189,16 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
           </EmptyState>
         )}
 
-        {messages.map((message, index) => {
-          const isLatestAssistant =
-            message.role === 'assistant' && index === messages.length - 1;
-          const rawContent =
-            voiceEnabled && isLatestAssistant && (awaitingAudio || visibleText)
-              ? visibleText
-              : message.content;
-
+        {messages.map((message) => {
           const displayContent =
-            message.role === 'assistant' && rawContent
-              ? autoLinkContentTypeUids(rawContent)
-              : rawContent;
+            message.role === 'assistant' && message.content
+              ? autoLinkContentTypeUids(message.content)
+              : message.content;
 
           return (
             <MessageRow key={message.id} $isUser={message.role === 'user'}>
               {message.role === 'assistant' && (
-                <Avatar src={waifuAvatar} alt="Assistant" />
+                <SparkleIcon><Sparkle /></SparkleIcon>
               )}
               <MessageBubble $isUser={message.role === 'user'}>
                 <MessageRole $isUser={message.role === 'user'}>
@@ -211,7 +210,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
                     <Markdown components={markdownComponents}>{displayContent}</Markdown>
                   </MarkdownBody>
                 )}
-                {message.role === 'assistant' && !displayContent && (isLoading || awaitingAudio) && (
+                {message.role === 'assistant' && !displayContent && isLoading && (
                   <TypingDots><span /><span /><span /></TypingDots>
                 )}
                 {message.toolCalls

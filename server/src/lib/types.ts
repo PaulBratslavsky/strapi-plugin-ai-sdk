@@ -1,8 +1,6 @@
 import type { ModelMessage, ToolSet, StopCondition } from 'ai';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import type { TTSProvider } from './tts/types';
-import type { TTSRegistry } from './tts';
 import type { AIProvider } from './ai-provider';
 import type { ToolRegistry } from './tool-registry';
 import type { GuardrailConfig } from '../guardrails/types';
@@ -58,8 +56,6 @@ export interface PluginConfig {
   maxConversationMessages?: number;
   /** Max tool call steps for admin chat (defaults to 3) */
   maxSteps?: number;
-  typecastApiKey?: string;
-  typecastActorId?: string;
   mcp?: MCPConfig;
   guardrails?: GuardrailConfig;
   publicChat?: PublicChatConfig;
@@ -110,8 +106,6 @@ export interface MCPSession {
 
 export interface PluginInstance {
   aiProvider?: AIProvider;
-  ttsProvider?: TTSProvider;
-  ttsRegistry?: TTSRegistry;
   toolRegistry?: ToolRegistry;
   createMcpServer?: (() => McpServer) | null;
   mcpSessions?: Map<string, MCPSession> | null;

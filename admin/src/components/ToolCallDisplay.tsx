@@ -141,7 +141,7 @@ const ContentLinkChip = styled(Link)`
 
 // --- Component ---
 
-export const HIDDEN_TOOLS = new Set(['triggerAnimation']);
+export const HIDDEN_TOOLS = new Set<string>();
 
 export function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) {
   const [expanded, setExpanded] = useState(false);

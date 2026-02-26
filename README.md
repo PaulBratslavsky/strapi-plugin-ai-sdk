@@ -4,14 +4,14 @@ A Strapi v5 plugin that adds an AI-powered chat assistant to the admin panel, ex
 
 ## Features
 
-- **Admin Chat UI** with 3D animated avatar, tool call visualization, and voice mode (TTS)
+- **Admin Chat UI** with markdown rendering, tool call visualization, conversation history, and memory management
 - **Content Tools** -- the AI can list content types, search content, create/update documents, and send emails
 - **API Endpoints** -- `/ask`, `/ask-stream`, and `/chat` for frontend consumption (compatible with `useChat` from `@ai-sdk/react`)
 - **Public Chat** -- sandboxed public-facing chat with read-only tools and a separate public memory store
-- **Embeddable Widget** -- drop a single `<script>` tag on any website to add an AI chat bubble with 3D avatar
+- **Embeddable Widget** -- drop a single `<script>` tag on any website to add an AI chat bubble
 - **MCP Server** -- expose tools to external AI clients (Claude Desktop, Cursor, etc.) via the Model Context Protocol
 - **Guardrails** -- regex-based input safety middleware that blocks prompt injection, jailbreaks, and destructive commands
-- **Extensible** -- register custom tools, AI providers, and TTS providers at runtime
+- **Extensible** -- register custom tools and AI providers at runtime
 
 ## Quick Start
 
@@ -92,10 +92,9 @@ That's it. A floating chat button appears in the bottom-right corner. The widget
 
 ### How it works
 
-- The widget bundles React, Three.js, and AI SDK internally (~276KB gzipped)
+- The widget bundles React and AI SDK internally (~130KB gzipped)
 - It renders inside a Shadow DOM so styles never conflict with your page
 - It uses the `/api/ai-sdk/public-chat` endpoint which only exposes read-only tools
-- The 3D avatar loads from `/models/avatar.glb` on your Strapi server (optional -- falls back to a procedural avatar)
 
 ### Public Chat vs Admin Chat
 
@@ -116,6 +115,7 @@ In `config/plugins.ts`, add `publicChat` with the content types visitors can que
   config: {
     anthropicApiKey: env('ANTHROPIC_API_KEY'),
     publicChat: {
+      chatModel: 'claude-haiku-4-5-20251001', // optional: use a cheaper model for public chat
       allowedContentTypes: [
         'api::article.article',
         'api::category.category',
@@ -125,6 +125,8 @@ In `config/plugins.ts`, add `publicChat` with the content types visitors can que
   },
 },
 ```
+
+If `allowedContentTypes` is an empty array, public chat will have no access to content.
 
 ### Managing public memories
 
@@ -152,10 +154,6 @@ export default ({ env }) => ({
       // System Prompt (optional)
       systemPrompt: 'You are a helpful CMS assistant.\n\n{tools}',
 
-      // TTS (optional)
-      typecastApiKey: env('TYPECAST_API_KEY'),
-      typecastActorId: env('TYPECAST_ACTOR_ID'),
-
       // MCP Session Tuning (optional)
       mcp: {
         sessionTimeoutMs: 4 * 60 * 60 * 1000,      // 4 hours (default)
@@ -165,6 +163,7 @@ export default ({ env }) => ({
 
       // Public Chat (optional)
       publicChat: {
+        chatModel: 'claude-haiku-4-5-20251001',     // optional cheaper model
         allowedContentTypes: ['api::article.article'],
       },
 
@@ -185,9 +184,9 @@ export default ({ env }) => ({
 
 - `claude-sonnet-4-20250514` (default)
 - `claude-opus-4-20250514`
+- `claude-haiku-4-5-20251001`
 - `claude-3-5-sonnet-20241022`
 - `claude-3-5-haiku-20241022`
-- `claude-3-haiku-20240307`
 
 ## API Endpoints
 
@@ -208,8 +207,7 @@ export default ({ env }) => ({
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/ai-sdk/chat` | Admin chat with tool use and avatar animations |
-| `POST` | `/ai-sdk/tts` | Text-to-speech synthesis |
+| `POST` | `/ai-sdk/chat` | Admin chat with full tool access |
 
 All routes with user input are protected by the guardrail middleware.
 
@@ -290,7 +288,6 @@ The AI assistant has access to these tools. Tools marked as **public** are also 
 | `searchContent` | `search_content` | Search and query any content type with filters, sorting, and pagination |
 | `writeContent` | `write_content` | Create or update documents in any content type |
 | `sendEmail` | `send_email` | Send emails via the configured email provider (e.g. Resend) |
-| `triggerAnimation` | *(internal)* | Trigger 3D avatar animations in the admin chat UI |
 
 ### Tool Details
 
@@ -548,11 +545,11 @@ Per-request `system` overrides in the request body take priority over the config
 The plugin adds a chat interface to the Strapi admin panel with:
 
 - **Chat UI** -- message list with markdown rendering, tool call visualization, and typing indicator
-- **3D Avatar** -- Three.js animated avatar with 8 procedural animations (idle, speak, wave, nod, think, celebrate, shake, spin)
-- **Voice Mode** -- text-to-speech via Typecast with word-by-word text reveal synced to audio playback
+- **Conversation History** -- persistent conversations stored per-user, accessible via the sidebar
+- **Memory Management** -- the AI remembers facts across conversations; view and manage memories from the toolbar
+- **Public Memory Store** -- shared facts available to public chat visitors (FAQ, policies, etc.)
 - **Tool Call Display** -- collapsible viewer showing tool inputs and outputs inline in the chat
-
-The avatar supports custom `.glb` models -- place your model at `<strapi-project>/public/models/avatar.glb` and restart Strapi.
+- **Widget Preview** -- live preview of the embeddable chat widget with copy-paste embed code
 
 ## Error Handling
 
@@ -581,7 +578,7 @@ Error response format:
 server/src/
   index.ts                    # Server entry point
   register.ts                 # Plugin register lifecycle
-  bootstrap.ts                # Initialize providers, tools, MCP, TTS
+  bootstrap.ts                # Initialize providers, tools, MCP
   destroy.ts                  # Graceful shutdown
   config/index.ts             # Plugin config defaults
   guardrails/                 # Input safety middleware
@@ -590,9 +587,8 @@ server/src/
     tool-registry.ts          # ToolRegistry class
     types.ts                  # Shared types
     utils.ts                  # Controller helpers
-    tts/                      # TTS provider registry + Typecast
   controllers/
-    controller.ts             # ask, askStream, chat, publicChat, tts, serveWidget handlers
+    controller.ts             # ask, askStream, chat, publicChat, serveWidget handlers
     public-memory.ts          # CRUD for public memories
     mcp.ts                    # MCP session management
   services/service.ts         # AI service facade
@@ -608,26 +604,25 @@ server/src/
     utils/sanitize.ts         # Content API sanitization
 
 admin/src/
-  pages/                      # App router + HomePage
+  pages/                      # App router, HomePage, WidgetPreviewPage, MemoryStorePage
   components/
     Chat.tsx                  # Chat orchestrator
-    MessageList.tsx           # Message rendering
-    ChatInput.tsx             # Input + voice toggle
+    MessageList.tsx           # Message rendering with markdown
+    ChatInput.tsx             # Input area
     ToolCallDisplay.tsx       # Tool call viewer
-    AvatarPanel.tsx           # 3D avatar panel
-    Avatar3D/                 # Three.js avatar + animations
+    ConversationSidebar.tsx   # Conversation history panel
+    MemoryPanel.tsx           # Memory management panel
   hooks/
     useChat.ts                # Chat state + SSE streaming
-    useAudioPlayer.ts         # TTS audio playback
-    useTextReveal.ts          # Word-by-word text reveal
-  context/                    # Avatar animation context
+    useConversations.ts       # Conversation CRUD
+    useMemories.ts            # Memory CRUD
 
 widget/src/                     # Embeddable chat widget (separate Vite build)
   embed.tsx                     # Auto-mount entry (Shadow DOM)
   react.tsx                     # React component export
   auto-detect.ts                # Script URL detection
   styles.css                    # Scoped CSS (no Tailwind)
-  components/                   # Chat + Avatar3D + animations
+  components/strapi-chat.tsx    # Chat UI component
 
 tests/                          # E2E integration tests
 docs/                           # Architecture + guardrails + email guides

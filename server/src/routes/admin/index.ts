@@ -11,14 +11,6 @@ export default {
       },
     },
     {
-      method: 'POST',
-      path: '/tts',
-      handler: 'controller.tts',
-      config: {
-        policies: [],
-      },
-    },
-    {
       method: 'GET',
       path: '/conversations',
       handler: 'conversation.find',

@@ -76,9 +76,7 @@ function updateToolOutput(setMessages: SetMessages, assistantId: string, toolCal
 export interface UseChatOptions {
   initialMessages?: Message[];
   conversationId?: string | null;
-  onAnimationTrigger?: (animation: string) => void;
   onStreamStart?: () => void;
-  onStreamEnd?: (fullText: string) => void;
 }
 
 export function useChat(options?: UseChatOptions) {
@@ -117,19 +115,12 @@ export function useChat(options?: UseChatOptions) {
             updateMessage(setMessages, assistantId, (message) => ({ ...message, content }));
           },
           onToolInput: (toolCallId, toolName, input) => {
-            if (toolName === 'triggerAnimation' && input && typeof input === 'object' && 'animation' in input) {
-              options?.onAnimationTrigger?.(String((input as { animation: string }).animation));
-            }
             addToolCall(setMessages, assistantId, toolCallId, toolName, input);
           },
           onToolOutput: (toolCallId, _toolName, output) => {
             updateToolOutput(setMessages, assistantId, toolCallId, output);
           },
         });
-
-        if (result) {
-          options?.onStreamEnd?.(result);
-        }
 
         if (!result) {
           updateMessage(setMessages, assistantId, (message) => ({ ...message, content: message.content || 'No response received.' }));
