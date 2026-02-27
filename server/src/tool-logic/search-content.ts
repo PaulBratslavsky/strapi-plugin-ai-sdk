@@ -18,7 +18,7 @@ export const searchContentSchema = z.object({
   filters: z
     .record(z.string(), z.unknown())
     .optional()
-    .describe('Strapi filter object, e.g. { username: { $containsi: "john" } }'),
+    .describe('Strapi filter object. Scalar: { title: { $containsi: "hello" } }. Relation: { author: { name: { $eq: "John" } } }. ManyToMany: { contentTags: { title: { $eq: "tutorial" } } }. Operators: $eq, $ne, $containsi, $in, $gt, $lt, $gte, $lte, $null, $notNull.'),
   fields: z
     .array(z.string())
     .optional()
@@ -53,7 +53,7 @@ export const searchContentSchema = z.object({
 });
 
 export const searchContentDescription =
-  'Search and query any Strapi content type. Use listContentTypes first to discover available content types and their fields, then use this tool to query specific collections. Use sort (e.g. "createdAt:desc") and pageSize: 1 to get the latest entry. By default, large content fields are stripped from results — set includeContent to true or use fields to get full content.';
+  'Search and query any Strapi content type. Use listContentTypes first to discover available content types and their fields, then use this tool to query specific collections. Use sort (e.g. "createdAt:desc") and pageSize: 1 to get the latest entry. By default, large content fields are stripped from results — set includeContent to true or use fields to get full content. To filter by a relation, nest the filter: { relationField: { fieldOnRelation: { $operator: "value" } } }.';
 
 export interface SearchContentParams {
   contentType: string;

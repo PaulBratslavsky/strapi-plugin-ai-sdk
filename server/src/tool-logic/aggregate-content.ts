@@ -18,7 +18,7 @@ export const aggregateContentSchema = z.object({
   filters: z
     .record(z.string(), z.unknown())
     .optional()
-    .describe('Strapi filter object, e.g. { category: { name: "tech" } }'),
+    .describe('Strapi filter object. Scalar: { title: { $containsi: "hello" } }. Relation: { author: { name: { $eq: "John" } } }. ManyToMany: { contentTags: { title: { $eq: "tutorial" } } }.'),
   groupByField: z
     .string()
     .optional()
