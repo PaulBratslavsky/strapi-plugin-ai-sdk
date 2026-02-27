@@ -119,7 +119,15 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
 
     // Cache in memory after first read
     if (!(controller as any)._widgetCache) {
-      (controller as any)._widgetCache = fs.readFileSync(widgetPath, 'utf-8');
+      try {
+        (controller as any)._widgetCache = fs.readFileSync(widgetPath, 'utf-8');
+      } catch (error) {
+        strapi.log.error('Failed to read widget file:', error);
+        ctx.status = 500;
+        ctx.type = 'application/javascript';
+        ctx.body = '// Error loading widget';
+        return;
+      }
     }
 
     ctx.type = 'application/javascript';

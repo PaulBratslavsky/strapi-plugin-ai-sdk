@@ -37,14 +37,20 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
 
   return {
     async ask(prompt: string, options?: { system?: string }) {
-      const result = await plugin.aiProvider!.generateText(prompt, {
+      if (!plugin.aiProvider) {
+        throw new Error('AI provider not initialized');
+      }
+      const result = await plugin.aiProvider.generateText(prompt, {
         system: options?.system,
       });
       return result.text;
     },
 
     async askStream(prompt: string, options?: { system?: string }) {
-      const result = await plugin.aiProvider!.streamText(prompt, {
+      if (!plugin.aiProvider) {
+        throw new Error('AI provider not initialized');
+      }
+      const result = await plugin.aiProvider.streamText(prompt, {
         system: options?.system,
       });
       return result.textStream;
@@ -86,7 +92,10 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
         }
       }
 
-      return plugin.aiProvider!.streamRaw({
+      if (!plugin.aiProvider) {
+        throw new Error('AI provider not initialized');
+      }
+      return plugin.aiProvider.streamRaw({
         messages: modelMessages,
         system,
         tools,
@@ -130,7 +139,10 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
         strapi.log.warn('[ai-sdk] Failed to load public memories:', err);
       }
 
-      return plugin.aiProvider!.streamRaw({
+      if (!plugin.aiProvider) {
+        throw new Error('AI provider not initialized');
+      }
+      return plugin.aiProvider.streamRaw({
         messages: modelMessages,
         system,
         tools,

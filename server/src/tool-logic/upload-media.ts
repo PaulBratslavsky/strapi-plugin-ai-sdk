@@ -1,6 +1,6 @@
 import type { Core } from '@strapi/strapi';
 import { z } from 'zod';
-import { writeFileSync, unlinkSync, mkdtempSync } from 'fs';
+import { writeFileSync, unlinkSync, mkdtempSync, rmdirSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -40,7 +40,46 @@ export async function uploadMedia(
 ): Promise<UploadMediaResult> {
   const { url, name, caption, alternativeText } = params;
 
-  const response = await fetch(url, { redirect: 'follow' });
+  // Validate URL to prevent SSRF attacks
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw new Error('Invalid URL provided');
+  }
+
+  // Only allow http and https protocols
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    throw new Error('Only HTTP and HTTPS protocols are allowed');
+  }
+
+  // Block private IP ranges and localhost to prevent SSRF
+  const hostname = parsedUrl.hostname.toLowerCase();
+  const isPrivateOrLocal =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname.startsWith('10.') ||
+    hostname.startsWith('192.168.') ||
+    hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) ||
+    hostname === '::1' ||
+    hostname.startsWith('::ffff:127.') ||
+    hostname === '169.254.169.254'; // AWS metadata service
+
+  if (isPrivateOrLocal) {
+    throw new Error('Cannot fetch from private or local network addresses');
+  }
+
+  const response = await fetch(url, {
+    redirect: 'manual',
+    signal: AbortSignal.timeout(30000) // 30 second timeout
+  });
+
+  // Handle redirects manually to prevent SSRF bypass
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error('Redirects are not allowed for security reasons');
+  }
+
   if (!response.ok) {
     throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`);
   }
@@ -49,9 +88,8 @@ export async function uploadMedia(
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  // Extract filename from the final URL (after redirects) or use provided name
-  const finalUrl = response.url || url;
-  const urlPath = new URL(finalUrl).pathname;
+  // Extract filename from URL (no redirects allowed) or use provided name
+  const urlPath = parsedUrl.pathname;
   const urlFilename = urlPath.split('/').pop() || 'upload';
   const filename = name || urlFilename;
 
@@ -79,7 +117,17 @@ export async function uploadMedia(
       files: fileData,
     });
   } finally {
-    try { unlinkSync(tmpPath); } catch { /* ignore cleanup errors */ }
+    // Clean up temp file and directory independently to prevent leaks
+    try {
+      unlinkSync(tmpPath);
+    } catch { /* ignore if file doesn't exist */ }
+    try {
+      rmdirSync(tmpDir);
+    } catch { /* ignore if directory doesn't exist */ }
+  }
+
+  if (!uploadedFile) {
+    throw new Error('Upload failed: no file returned from upload service');
   }
 
   return {
