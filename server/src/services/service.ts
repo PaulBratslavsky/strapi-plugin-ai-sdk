@@ -14,10 +14,10 @@ import {
 import { createTools, createPublicTools, describeTools } from '../tools';
 
 const DEFAULT_PREAMBLE =
-  'You are a Strapi CMS assistant. Use your tools to fulfill user requests. When asked to create or update content, use the appropriate tool — do not tell the user you cannot. When performing bulk operations (e.g. publish multiple items), call multiple tools in parallel in a single step rather than one at a time.';
+  'You are a Strapi CMS assistant. Use your tools to fulfill user requests. When asked to create or update content, use the appropriate tool — do not tell the user you cannot. When performing bulk operations (e.g. publish multiple items), call multiple tools in parallel in a single step rather than one at a time.\n\nFor analytics and counting questions (e.g. "how many", "count", "distribution", "trends", "breakdown"), use the aggregateContent tool instead of searchContent — it is faster and purpose-built for these queries. Present analytics results as markdown tables. After showing analytics results, suggest 2-3 follow-up questions the user might find useful under a "**You might also want to know:**" heading.';
 
 const DEFAULT_PUBLIC_PREAMBLE =
-  'You are a helpful public assistant for this website. Use your tools to answer questions about the site content. You cannot modify any content or perform administrative actions.';
+  'You are a helpful public assistant for this website. Use your tools to answer questions about the site content. You cannot modify any content or perform administrative actions.\n\nFor analytics and counting questions (e.g. "how many", "count", "distribution", "trends", "breakdown"), use the aggregateContent tool instead of searchContent — it is faster and purpose-built for these queries. Present analytics results as markdown tables. After showing analytics results, suggest 2-3 follow-up questions the user might find useful under a "**You might also want to know:**" heading.';
 
 function composeSystemPrompt(config: PluginConfig | undefined, toolsDescription: string, override?: string): string {
   // If the caller provided an explicit system prompt, use it as the base

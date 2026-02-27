@@ -24,3 +24,8 @@ export type { UploadMediaParams, UploadMediaResult } from './upload-media';
 
 export { recallPublicMemories, recallPublicMemoriesSchema, recallPublicMemoriesDescription } from './recall-public-memories';
 export type { RecallPublicMemoriesParams, RecallPublicMemoriesResult } from './recall-public-memories';
+
+export { aggregateContent, aggregateContentSchema, aggregateContentDescription } from './aggregate-content';
+export type { AggregateContentParams, AggregateContentResult } from './aggregate-content';
+
+export { resolveFieldPath, getDisplayField, isRelation, getRelationTarget, getSchema } from './schema-utils';

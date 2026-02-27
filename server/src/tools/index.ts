@@ -25,7 +25,7 @@ export function createTools(strapi: Core.Strapi, context?: ToolContext): ToolSet
 }
 
 /** Content tool names that accept a contentType parameter */
-const CONTENT_TOOLS = new Set(['searchContent', 'findOneContent']);
+const CONTENT_TOOLS = new Set(['searchContent', 'findOneContent', 'aggregateContent']);
 
 /**
  * Create a restricted tool set for the public chat endpoint.

@@ -3,6 +3,7 @@ import { Box, Typography } from '@strapi/design-system';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Sparkle } from '@strapi/icons';
 import type { Message } from '../hooks/useChat';
 import { ToolCallDisplay, HIDDEN_TOOLS } from './ToolCallDisplay';
@@ -84,8 +85,9 @@ const MarkdownBody = styled.div<{ $isUser: boolean }>`
     opacity: 0.85;
   }
   a { color: ${({ $isUser }) => ($isUser ? '#c0cfff' : '#4945ff')}; }
-  table { border-collapse: collapse; margin: 8px 0; font-size: 0.9em; }
-  th, td { border: 1px solid ${({ $isUser }) => ($isUser ? 'rgba(255,255,255,0.2)' : '#dcdce4')}; padding: 4px 8px; }
+  table { border-collapse: collapse; margin: 8px 0; font-size: 0.9em; width: 100%; overflow-x: auto; display: block; }
+  th, td { border: 1px solid ${({ $isUser }) => ($isUser ? 'rgba(255,255,255,0.2)' : '#dcdce4')}; padding: 4px 8px; text-align: left; white-space: nowrap; }
+  th { background: ${({ $isUser }) => ($isUser ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.03)')}; font-weight: 600; }
 `;
 
 const MessageRole = styled.div<{ $isUser: boolean }>`
@@ -207,7 +209,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
                 {message.role === 'user' && message.content}
                 {message.role === 'assistant' && displayContent && (
                   <MarkdownBody $isUser={false}>
-                    <Markdown components={markdownComponents}>{displayContent}</Markdown>
+                    <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{displayContent}</Markdown>
                   </MarkdownBody>
                 )}
                 {message.role === 'assistant' && !displayContent && isLoading && (

@@ -8,6 +8,7 @@ import { recallMemoriesTool } from './recall-memories';
 import { recallPublicMemoriesTool } from './recall-public-memories';
 import { findOneContentTool } from './find-one-content';
 import { uploadMediaTool } from './upload-media';
+import { aggregateContentTool } from './aggregate-content';
 
 /** All built-in tool definitions. Add new tools here. */
 export const builtInTools: ToolDefinition[] = [
@@ -20,4 +21,5 @@ export const builtInTools: ToolDefinition[] = [
   saveMemoryTool,
   recallMemoriesTool,
   recallPublicMemoriesTool,
+  aggregateContentTool,
 ];
