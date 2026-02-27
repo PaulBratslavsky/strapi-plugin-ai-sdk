@@ -29,3 +29,4 @@ export { aggregateContent, aggregateContentSchema, aggregateContentDescription }
 export type { AggregateContentParams, AggregateContentResult } from './aggregate-content';
 
 export { resolveFieldPath, getDisplayField, isRelation, getRelationTarget, getSchema } from './schema-utils';
+export type { ResolvedField } from './schema-utils';

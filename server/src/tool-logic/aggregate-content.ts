@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { z } from 'zod';
 import { resolveFieldPath } from './schema-utils';
+import type { ResolvedField } from './schema-utils';
 
 const MAX_PAGINATE = 1000;
 const PAGE_SIZE = 100;
@@ -101,19 +102,39 @@ function resolveField(doc: Record<string, unknown>, fieldPath: string): unknown 
   let current: unknown = doc;
   for (const part of parts) {
     if (current == null || typeof current !== 'object') return undefined;
+    // Don't traverse into arrays — return the array for the caller to handle
+    if (Array.isArray(current)) return undefined;
     current = (current as Record<string, unknown>)[part];
   }
   return current;
 }
 
 /**
- * Paginate through all matching documents.
- * Uses populate: '*' to ensure relations are available for grouping.
+ * Build a targeted Strapi populate object for specific relations.
+ * Falls back to '*' when no specific relations are needed.
+ */
+function buildPopulate(resolved: ResolvedField): string | Record<string, unknown> {
+  if (resolved.populate.length === 0) return '*';
+
+  const populate: Record<string, unknown> = {};
+  for (const rel of resolved.populate) {
+    if (resolved.selectField) {
+      populate[rel] = { fields: [resolved.selectField] };
+    } else {
+      populate[rel] = true;
+    }
+  }
+  return populate;
+}
+
+/**
+ * Paginate through all matching documents with a specific populate.
  */
 async function paginateAll(
   strapi: Core.Strapi,
   contentType: string,
   baseQuery: Record<string, unknown>,
+  populate: string | Record<string, unknown> = '*',
 ): Promise<Record<string, unknown>[]> {
   const docs: Record<string, unknown>[] = [];
   let page = 1;
@@ -121,7 +142,7 @@ async function paginateAll(
   while (docs.length < MAX_PAGINATE) {
     const results = await strapi.documents(contentType as any).findMany({
       ...baseQuery,
-      populate: '*',
+      populate,
       page,
       pageSize: PAGE_SIZE,
     } as any);
@@ -139,18 +160,11 @@ async function paginateAll(
 const DISPLAY_CANDIDATES = ['name', 'title', 'username', 'label', 'slug', 'email'];
 
 /**
- * Extract a human-readable string from a value that came out of resolveField.
- * Handles primitives, null, and relation objects that weren't fully dot-pathed.
+ * Extract a human-readable string from a single value.
  */
 function toDisplayValue(raw: unknown): string {
   if (raw == null) return '(empty)';
   if (typeof raw !== 'object') return String(raw);
-
-  // Array relation (e.g. manyToMany) — join display values
-  if (Array.isArray(raw)) {
-    if (raw.length === 0) return '(empty)';
-    return raw.map((item) => toDisplayValue(item)).join(', ');
-  }
 
   // Single relation object — pick best display field
   const obj = raw as Record<string, unknown>;
@@ -162,17 +176,42 @@ function toDisplayValue(raw: unknown): string {
 
 /**
  * Group documents by a resolved field path and return sorted counts.
+ *
+ * For manyToMany relations (isArray=true), each related item is counted separately.
+ * e.g. an article tagged ["tutorial", "strapi"] counts once for each tag.
  */
 function groupDocs(
   docs: Record<string, unknown>[],
-  fieldPath: string
+  resolved: ResolvedField,
 ): { value: string; count: number }[] {
   const counts = new Map<string, number>();
+  const topField = resolved.resolvedPath.split('.')[0];
+  const subPath = resolved.resolvedPath.split('.').slice(1).join('.');
 
   for (const doc of docs) {
-    const raw = resolveField(doc, fieldPath);
-    const value = toDisplayValue(raw);
-    counts.set(value, (counts.get(value) ?? 0) + 1);
+    if (resolved.isArray) {
+      // manyToMany / oneToMany — the top-level field is an array of related objects
+      const items = doc[topField];
+      if (!Array.isArray(items) || items.length === 0) {
+        counts.set('(empty)', (counts.get('(empty)') ?? 0) + 1);
+        continue;
+      }
+      for (const item of items) {
+        let value: string;
+        if (subPath && typeof item === 'object' && item != null) {
+          const sub = resolveField(item as Record<string, unknown>, subPath);
+          value = sub != null ? String(sub) : toDisplayValue(item);
+        } else {
+          value = toDisplayValue(item);
+        }
+        counts.set(value, (counts.get(value) ?? 0) + 1);
+      }
+    } else {
+      // Scalar or manyToOne — single value per document
+      const raw = resolveField(doc, resolved.resolvedPath);
+      const value = toDisplayValue(raw);
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
   }
 
   return Array.from(counts.entries())
@@ -181,7 +220,6 @@ function groupDocs(
 }
 
 function getWeekKey(date: Date): string {
-  // ISO week: find the Monday of the week
   const d = new Date(date);
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -228,13 +266,14 @@ export async function aggregateContent(
       }
 
       // Auto-resolve relation fields using the runtime schema
-      // e.g. "author" → "author.name", "category" → "category.name"
-      const { resolvedPath } = resolveFieldPath(strapi, contentType, groupByField);
+      // e.g. "author" → "author.name", "contentTags" → "contentTags.title"
+      const resolved = resolveFieldPath(strapi, contentType, groupByField);
+      const populate = buildPopulate(resolved);
 
-      const docs = await paginateAll(strapi, contentType, baseQuery);
-      const groups = groupDocs(docs, resolvedPath);
+      const docs = await paginateAll(strapi, contentType, baseQuery, populate);
+      const groups = groupDocs(docs, resolved);
 
-      return { total: docs.length, groups, resolvedField: resolvedPath };
+      return { total: docs.length, groups, resolvedField: resolved.resolvedPath };
     }
 
     case 'countByDateRange': {

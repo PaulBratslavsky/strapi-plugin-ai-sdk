@@ -93,33 +93,56 @@ export function getDisplayField(strapi: Core.Strapi, contentType: string): strin
  *
  * Returns the resolved path and any top-level relations that need populating.
  */
+/** Relation kinds where the field value is an array of related items */
+const MANY_RELATIONS = new Set(['oneToMany', 'manyToMany']);
+
+export interface ResolvedField {
+  /** The dot-path to extract the display value (e.g. "author.name") */
+  resolvedPath: string;
+  /** Top-level relations that must be populated */
+  populate: string[];
+  /** True if the relation is a *ToMany (value is an array of items) */
+  isArray: boolean;
+  /** The sub-field to select from the relation (for targeted populate) */
+  selectField?: string;
+}
+
 export function resolveFieldPath(
   strapi: Core.Strapi,
   contentType: string,
   fieldPath: string
-): { resolvedPath: string; populate: string[] } {
+): ResolvedField {
   const parts = fieldPath.split('.');
   const topField = parts[0];
   const attr = getAttribute(strapi, contentType, topField);
 
   if (!attr) {
     // Unknown field — pass through as-is
-    return { resolvedPath: fieldPath, populate: [] };
+    return { resolvedPath: fieldPath, populate: [], isArray: false };
   }
 
   if (attr.type === 'relation' && attr.target) {
+    const isArray = MANY_RELATIONS.has(attr.relation ?? '');
+
     if (parts.length === 1) {
       // Bare relation field — auto-append display field from target schema
       const displayField = getDisplayField(strapi, attr.target);
       return {
         resolvedPath: `${topField}.${displayField}`,
         populate: [topField],
+        isArray,
+        selectField: displayField,
       };
     }
     // Already has a sub-path (e.g. "author.email") — just ensure it's populated
-    return { resolvedPath: fieldPath, populate: [topField] };
+    return {
+      resolvedPath: fieldPath,
+      populate: [topField],
+      isArray,
+      selectField: parts.slice(1).join('.'),
+    };
   }
 
   // Scalar field — no populate needed
-  return { resolvedPath: fieldPath, populate: [] };
+  return { resolvedPath: fieldPath, populate: [], isArray: false };
 }

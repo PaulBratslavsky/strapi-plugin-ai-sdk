@@ -119,6 +119,31 @@ const TypingDots = styled.span`
   }
 `;
 
+const ThinkingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: #666687;
+`;
+
+const ThinkingSpinner = styled.span`
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #dcdce4;
+  border-top-color: #4945ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
 const EmptyState = styled.div`
   display: flex;
   flex-direction: column;
@@ -191,11 +216,15 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
           </EmptyState>
         )}
 
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const displayContent =
             message.role === 'assistant' && message.content
               ? autoLinkContentTypeUids(message.content)
               : message.content;
+
+          const isLastMessage = index === messages.length - 1;
+          const hasToolsRunning = message.toolCalls?.some((tc) => tc.output === undefined) ?? false;
+          const showThinking = isLoading && isLastMessage && message.role === 'assistant' && displayContent && hasToolsRunning;
 
           return (
             <MessageRow key={message.id} $isUser={message.role === 'user'}>
@@ -220,6 +249,12 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
                   .map((tc) => (
                     <ToolCallDisplay key={tc.toolCallId} toolCall={tc} />
                   ))}
+                {showThinking && (
+                  <ThinkingIndicator>
+                    <ThinkingSpinner />
+                    Working on it…
+                  </ThinkingIndicator>
+                )}
               </MessageBubble>
             </MessageRow>
           );

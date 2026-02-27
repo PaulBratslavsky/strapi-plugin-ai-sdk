@@ -96,6 +96,22 @@ const ToolCallHeader = styled.button`
   }
 `;
 
+const Spinner = styled.span`
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #a5a5ba;
+  border-top-color: #4945ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
 const ToolCallContent = styled.pre`
   margin: 0;
   padding: 8px 12px;
@@ -152,11 +168,10 @@ export function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) 
       <ToolCallHeader onClick={() => setExpanded(!expanded)}>
         <span>{expanded ? '\u25BC' : '\u25B6'}</span>
         <span>Tool: {toolCall.toolName}</span>
-        {toolCall.output !== undefined && (
-          <span style={{ marginLeft: 'auto', fontWeight: 400, opacity: 0.6 }}>
-            completed
-          </span>
-        )}
+        {toolCall.output === undefined
+          ? <Spinner />
+          : <span style={{ marginLeft: 'auto', fontWeight: 400, opacity: 0.6 }}>completed</span>
+        }
       </ToolCallHeader>
       {contentLinks.length > 0 && (
         <ContentLinksRow>
