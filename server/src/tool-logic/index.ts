@@ -28,5 +28,8 @@ export type { RecallPublicMemoriesParams, RecallPublicMemoriesResult } from './r
 export { aggregateContent, aggregateContentSchema, aggregateContentDescription } from './aggregate-content';
 export type { AggregateContentParams, AggregateContentResult } from './aggregate-content';
 
+export { manageTask, manageTaskSchema, manageTaskDescription } from './manage-task';
+export type { ManageTaskParams, ManageTaskResult } from './manage-task';
+
 export { resolveFieldPath, getDisplayField, isRelation, getRelationTarget, getSchema } from './schema-utils';
 export type { ResolvedField } from './schema-utils';

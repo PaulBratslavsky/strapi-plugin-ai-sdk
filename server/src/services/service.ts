@@ -23,7 +23,9 @@ Strapi filter syntax for searchContent and aggregateContent:
 - Relation (manyToOne): { author: { name: { $eq: "John" } } }
 - Relation (manyToMany): { contentTags: { title: { $eq: "tutorial" } } }
 - Always nest relation filters as: { relationField: { fieldOnRelatedType: { $operator: value } } }
-- Never use flat dot-path syntax like "contentTags.title" in filters — always use nested objects.`;
+- Never use flat dot-path syntax like "contentTags.title" in filters — always use nested objects.
+
+Task management: You have a manageTask tool for tracking the user's tasks. At the START of every conversation, proactively use manageTask with action "summary" to check for open tasks, then greet the user with a brief status and suggest what to tackle next based on consequence × impact score. When the user mentions action items, commitments, or things they need to do during conversation, proactively create tasks for them — but ALWAYS ask the user for consequence (1-5: what happens if this is NOT done?) and impact (1-5: how much does completing this move the needle?) before creating. Never assume default scores. When presenting task lists, use markdown tables.`;
 
 const DEFAULT_PUBLIC_PREAMBLE =
   `You are a helpful public assistant for this website. Use your tools to answer questions about the site content. You cannot modify any content or perform administrative actions.
