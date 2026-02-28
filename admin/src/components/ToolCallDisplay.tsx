@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import type { ToolCall } from '../hooks/useChat';
+import { TaskConfirmCard } from './TaskConfirmCard';
 
 // --- Helpers ---
 
@@ -65,6 +66,39 @@ function extractContentLinks(toolCall: ToolCall): ContentLink[] {
   }
 
   return [];
+}
+
+const TASK_CONTENT_TYPE = 'plugin::ai-sdk.task';
+
+function extractTaskLinks(toolCall: ToolCall): ContentLink[] {
+  if (toolCall.toolName !== 'manageTask' || toolCall.output == null) return [];
+
+  const output = toolCall.output as Record<string, unknown>;
+  if (!output.success) return [];
+
+  const data = output.data as Record<string, unknown> | Array<Record<string, unknown>> | undefined;
+  if (!data) return [];
+
+  // Single task (create, update, complete)
+  if (!Array.isArray(data)) {
+    const docId = data.documentId as string | undefined;
+    const title = (data.title as string) || docId;
+    if (docId && title) {
+      return [{ label: title, to: buildContentManagerUrl(TASK_CONTENT_TYPE, docId) }];
+    }
+    return [];
+  }
+
+  // List of tasks
+  const links: ContentLink[] = [];
+  for (const task of data.slice(0, 5)) {
+    const docId = task.documentId as string | undefined;
+    const title = (task.title as string) || docId;
+    if (docId && title) {
+      links.push({ label: title, to: buildContentManagerUrl(TASK_CONTENT_TYPE, docId) });
+    }
+  }
+  return links;
 }
 
 // --- Styled Components ---
@@ -162,6 +196,15 @@ export const HIDDEN_TOOLS = new Set<string>();
 export function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) {
   const [expanded, setExpanded] = useState(false);
   const contentLinks = extractContentLinks(toolCall);
+  const taskLinks = extractTaskLinks(toolCall);
+
+  // Intercept manageTask pending confirmation — render inline form card
+  if (toolCall.toolName === 'manageTask' && toolCall.output != null) {
+    const output = toolCall.output as Record<string, unknown>;
+    if (output.status === 'pending_confirmation' && output.proposed) {
+      return <TaskConfirmCard proposed={output.proposed as any} />;
+    }
+  }
 
   return (
     <ToolCallBox>
@@ -173,9 +216,14 @@ export function ToolCallDisplay({ toolCall }: Readonly<{ toolCall: ToolCall }>) 
           : <span style={{ marginLeft: 'auto', fontWeight: 400, opacity: 0.6 }}>completed</span>
         }
       </ToolCallHeader>
-      {contentLinks.length > 0 && (
+      {(contentLinks.length > 0 || taskLinks.length > 0) && (
         <ContentLinksRow>
           {contentLinks.map((link) => (
+            <ContentLinkChip key={link.to} to={link.to}>
+              {link.label}
+            </ContentLinkChip>
+          ))}
+          {taskLinks.map((link) => (
             <ContentLinkChip key={link.to} to={link.to}>
               {link.label}
             </ContentLinkChip>

@@ -13,8 +13,8 @@ export const manageTaskSchema = z.object({
   description: z.string().optional().describe('Brief context or why this matters.'),
   content: z.string().optional().describe('Detailed notes, steps, or links (markdown).'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().describe('Priority level. Default: medium.'),
-  consequence: z.number().int().min(1).max(5).optional().describe('1-5: What happens if this is NOT done? REQUIRED for create — ask the user, never assume.'),
-  impact: z.number().int().min(1).max(5).optional().describe('1-5: How much does completing this move the needle? REQUIRED for create — ask the user, never assume.'),
+  consequence: z.number().int().min(1).max(5).optional().describe('1-5: What happens if this is NOT done? Do NOT ask the user — omit this and a UI form will collect it.'),
+  impact: z.number().int().min(1).max(5).optional().describe('1-5: How much does completing this move the needle? Do NOT ask the user — omit this and a UI form will collect it.'),
   dueDate: z.string().optional().describe('Due date in YYYY-MM-DD format.'),
   done: z.boolean().optional().describe('Set done status explicitly (for update action).'),
   filters: z.record(z.string(), z.unknown()).optional().describe('Additional Strapi filters for list action.'),
@@ -28,6 +28,14 @@ export type ManageTaskParams = z.infer<typeof manageTaskSchema>;
 export interface ManageTaskResult {
   success: boolean;
   message: string;
+  status?: 'pending_confirmation';
+  proposed?: {
+    title: string;
+    description?: string;
+    content?: string;
+    priority: string;
+    dueDate: string | null;
+  };
   data?: unknown;
 }
 
@@ -92,7 +100,15 @@ export async function manageTask(
         if (params.consequence == null || params.impact == null) {
           return {
             success: false,
-            message: 'consequence and impact are required when creating a task. Ask the user to rate: consequence (1-5: what happens if this is NOT done?) and impact (1-5: how much does completing this move the needle?). Do NOT assume defaults.',
+            status: 'pending_confirmation',
+            message: 'A confirmation form has been shown to the user in the chat. They will set consequence and impact scores and confirm. Do NOT re-call this tool — the task will be created when the user confirms.',
+            proposed: {
+              title: params.title,
+              description: params.description,
+              content: params.content,
+              priority: params.priority ?? 'medium',
+              dueDate: params.dueDate ?? null,
+            },
           };
         }
         // Check for duplicate — if a similar open task exists, update it instead
