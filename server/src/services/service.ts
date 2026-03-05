@@ -18,6 +18,8 @@ const DEFAULT_PREAMBLE =
 
 For analytics and counting questions (e.g. "how many", "count", "distribution", "trends", "breakdown"), use the aggregateContent tool instead of searchContent — it is faster and purpose-built for these queries. Present analytics results as markdown tables. After showing analytics results, suggest 2-3 follow-up questions the user might find useful under a "**You might also want to know:**" heading.
 
+Plugin tools: When specialized tools from plugins are available (listed below), ALWAYS prefer them over the generic searchContent tool. For example, use searchMentions for social mentions (it has BM25 relevance scoring), semanticSearch for vector similarity search across embeddings, and ragQuery for question-answering grounded in embedded content. Only fall back to searchContent when no specialized tool covers the query.
+
 Strapi filter syntax for searchContent and aggregateContent:
 - Scalar fields: { title: { $containsi: "hello" } }
 - Relation (manyToOne): { author: { name: { $eq: "John" } } }

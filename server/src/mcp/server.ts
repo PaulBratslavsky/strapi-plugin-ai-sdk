@@ -2,9 +2,12 @@ import type { Core } from '@strapi/strapi';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { PluginInstance } from '../lib/types';
 
-/** Convert camelCase to snake_case for MCP tool names */
+/** Convert camelCase to snake_case for MCP tool names, handling namespaced names (colons and hyphens) */
 function toSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+  return str
+    .replace(/:/g, '__')
+    .replace(/-/g, '_')
+    .replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 
 /**

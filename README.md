@@ -286,8 +286,11 @@ The AI assistant has access to these tools. Tools marked as **public** are also 
 |------|----------|-------------|
 | `listContentTypes` | `list_content_types` | List all Strapi content types and components with their fields and relations |
 | `searchContent` | `search_content` | Search and query any content type with filters, sorting, and pagination |
+| `aggregateContent` | `aggregate_content` | Count, group, and analyze content (faster than searchContent for analytics) |
 | `writeContent` | `write_content` | Create or update documents in any content type |
 | `sendEmail` | `send_email` | Send emails via the configured email provider (e.g. Resend) |
+
+Additionally, the AI SDK automatically discovers tools from other installed plugins (see [Extending the Plugin](#adding-tools-from-other-plugins-convention-based-discovery)). For example, with the mentions and embeddings plugins installed, the AI also has access to `searchMentions`, `semanticSearch`, `ragQuery`, and more.
 
 ### Tool Details
 
@@ -465,7 +468,151 @@ curl -N -X POST http://localhost:1337/api/ai-sdk/ask-stream \
 
 ## Extending the Plugin
 
-### Adding a Custom Tool
+### Adding Tools from Other Plugins (Convention-Based Discovery)
+
+Any Strapi plugin can contribute tools to the AI SDK by exposing an `ai-tools` service with a `getTools()` method. The AI SDK discovers these automatically at boot time -- no configuration required.
+
+```mermaid
+flowchart LR
+  subgraph "AI SDK Bootstrap"
+    B[Scan all plugins]
+  end
+
+  subgraph "Plugin A"
+    A1[ai-tools service] --> A2["getTools()"]
+  end
+
+  subgraph "Plugin B"
+    B1[ai-tools service] --> B2["getTools()"]
+  end
+
+  B --> A1
+  B --> B1
+  A2 --> R[ToolRegistry]
+  B2 --> R
+  R --> Chat[Admin Chat]
+  R --> MCP[MCP Server]
+  R --> Public[Public Chat]
+```
+
+#### How It Works
+
+1. On startup, the AI SDK scans every loaded plugin for an `ai-tools` service
+2. If found, it calls `getTools()` which returns an array of `ToolDefinition` objects
+3. Each tool is namespaced as `pluginName__toolName` (e.g., `octalens_mentions__searchMentions`) to prevent collisions
+4. Discovered tools are registered in the shared `ToolRegistry` alongside built-in tools
+5. All registered tools are available in admin chat, public chat (if `publicSafe: true`), and MCP
+
+#### Creating an `ai-tools` Service in Your Plugin
+
+**1. Define canonical tools** in `server/src/tools/`:
+
+```typescript
+// server/src/tools/my-tool.ts
+import { z } from 'zod';
+import type { Core } from '@strapi/strapi';
+
+const schema = z.object({
+  query: z.string().describe('Search query'),
+  limit: z.number().min(1).max(50).optional().default(10).describe('Max results'),
+});
+
+export const mySearchTool = {
+  name: 'mySearch',
+  description: 'Search my plugin data with relevance ranking.',
+  schema,
+  execute: async (args: z.infer<typeof schema>, strapi: Core.Strapi) => {
+    const validated = schema.parse(args);
+    const results = await strapi.documents('plugin::my-plugin.item' as any).findMany({
+      filters: { title: { $containsi: validated.query } },
+      limit: validated.limit,
+    });
+    return { results, total: results.length };
+  },
+  publicSafe: true, // available in public chat (read-only operations)
+};
+```
+
+**2. Create the `ai-tools` service:**
+
+```typescript
+// server/src/services/ai-tools.ts
+import type { Core } from '@strapi/strapi';
+import { tools } from '../tools';
+
+export default ({ strapi }: { strapi: Core.Strapi }) => ({
+  getTools() {
+    return tools;
+  },
+});
+```
+
+**3. Register the service:**
+
+```typescript
+// server/src/services/index.ts
+import myService from './my-service';
+import aiTools from './ai-tools';
+
+export default {
+  'my-service': myService,
+  'ai-tools': aiTools,
+};
+```
+
+That's it. The AI SDK will discover and register your tools on the next Strapi restart.
+
+#### ToolDefinition Interface
+
+```typescript
+interface ToolDefinition {
+  name: string;                    // camelCase, unique within your plugin
+  description: string;             // Clear description for the AI model
+  schema: z.ZodObject<any>;        // Zod schema for parameter validation
+  execute: (args: any, strapi: Core.Strapi, context?: ToolContext) => Promise<unknown>;
+  internal?: boolean;              // If true, hidden from MCP (AI chat only)
+  publicSafe?: boolean;            // If true, available in public/widget chat
+}
+```
+
+#### Canonical Architecture Pattern
+
+The recommended pattern is to define tools once in `server/src/tools/` and consume them from both the AI SDK service and MCP handlers:
+
+```mermaid
+flowchart TB
+  subgraph "Your Plugin"
+    T["server/src/tools/<br/>Canonical tool definitions<br/>(Zod schema + business logic)"]
+
+    subgraph "AI SDK Path"
+      S["services/ai-tools.ts<br/>getTools() → tools array"]
+    end
+
+    subgraph "MCP Path"
+      M["mcp/tools/*.ts<br/>Thin wrappers → MCP envelope"]
+      MS["mcp/server.ts"]
+    end
+
+    T --> S
+    T --> M
+    M --> MS
+  end
+
+  S -->|"Discovery"| SDK["AI SDK ToolRegistry"]
+  MS -->|"JSON-RPC"| Clients["Claude Desktop / Cursor"]
+```
+
+This eliminates duplication -- business logic lives in one place, and each consumer (AI SDK, MCP) uses a thin adapter.
+
+#### Real-World Examples
+
+Two plugins already use this pattern:
+
+**[strapi-octolens-mentions-plugin](../strapi-octolens-mentions-plugin/)** -- Contributes 4 tools: `searchMentions` (BM25 relevance search), `listMentions`, `getMention`, `updateMention`
+
+**[strapi-content-embeddings](../strapi-content-embeddings/)** -- Contributes 5 tools: `semanticSearch` (vector similarity), `ragQuery` (RAG), `listEmbeddings`, `getEmbedding`, `createEmbedding`
+
+### Adding a Custom Tool (Without a Plugin)
 
 **Option A: Inside the plugin** -- create files in `tools/definitions/` and `tool-logic/`, add to the `builtInTools` array.
 
@@ -578,7 +725,7 @@ Error response format:
 server/src/
   index.ts                    # Server entry point
   register.ts                 # Plugin register lifecycle
-  bootstrap.ts                # Initialize providers, tools, MCP
+  bootstrap.ts                # Initialize providers, tools, MCP, plugin tool discovery
   destroy.ts                  # Graceful shutdown
   config/index.ts             # Plugin config defaults
   guardrails/                 # Input safety middleware
@@ -650,6 +797,8 @@ STRAPI_TOKEN=your-api-token npm run test:guardrails
 ## Documentation
 
 - [Architecture](./docs/architecture.md) -- full system architecture, data flows, extension guides
+- [Plugin Tool Discovery](./docs/plugin-tool-discovery.md) -- cross-plugin tool discovery architecture and implementation
+- [Tool Standardization Spec](./docs/tool-standardization-spec.md) -- canonical tool format, Zod-first vs MCP-native comparison, portability
 - [Guardrails](./docs/guardrails.md) -- guardrail system, pattern lists, `beforeProcess` hook API
 - [Sending Emails with Resend](./docs/sending-emails-with-resend.md) -- Resend setup, email tool, domain verification
 

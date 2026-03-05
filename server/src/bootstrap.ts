@@ -36,6 +36,66 @@ const bootstrap = ({ strapi }: { strapi: Core.Strapi }) => {
   }
   plugin.toolRegistry = toolRegistry;
 
+  // Discover tools from other plugins
+  const pluginNames = Object.keys(strapi.plugins).filter((n) => n !== PLUGIN_ID);
+  strapi.log.info(`[${PLUGIN_ID}] Scanning ${pluginNames.length} plugins for ai-tools: [${pluginNames.join(', ')}]`);
+
+  for (const [pluginName, pluginInstance] of Object.entries(strapi.plugins)) {
+    if (pluginName === PLUGIN_ID) continue;
+
+    try {
+      // Try both plugin.service() and strapi.service() patterns
+      let aiToolsService: any = null;
+      try {
+        aiToolsService = strapi.plugin(pluginName)?.service?.('ai-tools');
+      } catch {
+        // Plugin may not support service() yet
+      }
+      if (!aiToolsService) {
+        try {
+          aiToolsService = (pluginInstance as any).service?.('ai-tools');
+        } catch {
+          // Fallback also failed
+        }
+      }
+
+      if (!aiToolsService?.getTools) {
+        strapi.log.debug(`[${PLUGIN_ID}] No ai-tools service on plugin: ${pluginName}`);
+        continue;
+      }
+
+      strapi.log.info(`[${PLUGIN_ID}] Found ai-tools service on plugin: ${pluginName}`);
+
+      const contributed = aiToolsService.getTools();
+      if (!Array.isArray(contributed)) continue;
+
+      let count = 0;
+      for (const tool of contributed) {
+        if (!tool.name || !tool.execute || !tool.schema) {
+          strapi.log.warn(`[${PLUGIN_ID}] Invalid tool from ${pluginName}: ${tool.name || 'unnamed'}`);
+          continue;
+        }
+
+        // API tool names only allow [a-zA-Z0-9_-], so use double-underscore as namespace separator
+        const safeName = pluginName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const namespacedName = `${safeName}__${tool.name}`;
+        if (toolRegistry.has(namespacedName)) {
+          strapi.log.warn(`[${PLUGIN_ID}] Duplicate tool: ${namespacedName}`);
+          continue;
+        }
+
+        toolRegistry.register({ ...tool, name: namespacedName });
+        count++;
+      }
+
+      if (count > 0) {
+        strapi.log.info(`[${PLUGIN_ID}] Registered ${count} tools from plugin: ${pluginName}`);
+      }
+    } catch (err) {
+      strapi.log.warn(`[${PLUGIN_ID}] Tool discovery failed for ${pluginName}: ${err}`);
+    }
+  }
+
   // Store the MCP server factory and session map on the plugin instance
   plugin.createMcpServer = () => createMcpServer(strapi);
   plugin.mcpSessions = new Map();

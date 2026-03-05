@@ -16,6 +16,9 @@ export interface ToolDefinition {
   publicSafe?: boolean;
 }
 
+/** Type alias for external plugin authors to import when contributing tools */
+export type AiToolContribution = ToolDefinition;
+
 export class ToolRegistry {
   private readonly tools = new Map<string, ToolDefinition>();
 
