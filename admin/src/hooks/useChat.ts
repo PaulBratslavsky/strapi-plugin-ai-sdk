@@ -24,11 +24,28 @@ function generateId(): string {
 }
 
 function toUIMessages(messages: Message[]) {
-  return messages.map((message) => ({
-    id: message.id,
-    role: message.role,
-    parts: [{ type: 'text' as const, text: message.content }],
-  }));
+  return messages.map((message) => {
+    const parts: Array<Record<string, unknown>> = [];
+
+    if (message.content) {
+      parts.push({ type: 'text', text: message.content });
+    }
+
+    if (message.toolCalls) {
+      for (const tc of message.toolCalls) {
+        parts.push({
+          type: `tool-${tc.toolName}`,
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          state: tc.output !== undefined ? 'output-available' : 'input-available',
+          input: tc.input,
+          ...(tc.output !== undefined ? { output: tc.output } : {}),
+        });
+      }
+    }
+
+    return { id: message.id, role: message.role, parts };
+  });
 }
 
 async function fetchChatStream(messages: Message[], enabledToolSources?: string[]): Promise<ReadableStreamDefaultReader<Uint8Array>> {
