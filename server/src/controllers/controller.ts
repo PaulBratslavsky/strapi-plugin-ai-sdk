@@ -83,7 +83,7 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     ctx.set('x-vercel-ai-ui-message-stream', 'v1');
 
     // Convert Web ReadableStream to Node.js Readable stream for Koa
-    ctx.body = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
+    ctx.body = Readable.fromWeb(response.body as import('node:stream/web').ReadableStream);
   },
 
   /**
@@ -107,7 +107,7 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     ctx.set('X-Accel-Buffering', 'no');
     ctx.set('x-vercel-ai-ui-message-stream', 'v1');
 
-    ctx.body = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
+    ctx.body = Readable.fromWeb(response.body as import('node:stream/web').ReadableStream);
   },
 
   async getToolSources(ctx: Context) {
