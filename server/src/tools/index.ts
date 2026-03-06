@@ -43,8 +43,9 @@ const CONTENT_TOOLS = new Set(['searchContent', 'findOneContent', 'aggregateCont
  * Create a restricted tool set for the public chat endpoint.
  * Only includes tools marked as publicSafe.
  * Content tools are wrapped to enforce allowedContentTypes.
+ * Plugin tools are only included if their source is in publicToolSources.
  */
-export function createPublicTools(strapi: Core.Strapi, allowedContentTypes: string[]): ToolSet {
+export function createPublicTools(strapi: Core.Strapi, allowedContentTypes: string[], publicToolSources?: string[]): ToolSet {
   const plugin = strapi.plugin('ai-sdk') as unknown as PluginInstance;
   const registry = plugin.toolRegistry;
 
@@ -53,9 +54,17 @@ export function createPublicTools(strapi: Core.Strapi, allowedContentTypes: stri
   }
 
   const allowed = new Set(allowedContentTypes);
+  const allowedSources = new Set(publicToolSources ?? []);
   const tools: ToolSet = {};
 
   for (const [name, def] of registry.getPublicSafe()) {
+    // Plugin tools (with __) are only included if their source is in publicToolSources
+    const sepIndex = name.indexOf('__');
+    if (sepIndex !== -1) {
+      const prefix = name.substring(0, sepIndex);
+      if (!allowedSources.has(prefix)) continue;
+    }
+
     if (CONTENT_TOOLS.has(name)) {
       // Wrap content tools to enforce allowed content types
       tools[name] = tool({

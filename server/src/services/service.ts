@@ -137,13 +137,14 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
       const maxSteps = publicConfig?.maxSteps ?? DEFAULT_PUBLIC_MAX_STEPS;
       const publicModel = publicConfig?.chatModel ?? DEFAULT_PUBLIC_CHAT_MODEL;
       const allowedContentTypes = publicConfig?.allowedContentTypes ?? [];
+      const publicToolSources = publicConfig?.publicToolSources;
 
       const trimmedMessages = messages.length > maxMessages
         ? messages.slice(-maxMessages)
         : messages;
 
       const modelMessages = await convertToModelMessages(trimmedMessages);
-      const tools = createPublicTools(strapi, allowedContentTypes);
+      const tools = createPublicTools(strapi, allowedContentTypes, publicToolSources);
       const toolsDescription = describeTools(tools);
       let system = composeSystemPrompt(config, toolsDescription, options?.system || DEFAULT_PUBLIC_PREAMBLE);
 
