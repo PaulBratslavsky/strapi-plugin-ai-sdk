@@ -5,9 +5,11 @@ import styled from 'styled-components';
 import { useChat } from '../hooks/useChat';
 import { useConversations } from '../hooks/useConversations';
 import { useMemories } from '../hooks/useMemories';
+import { useToolSources } from '../hooks/useToolSources';
 import { PLUGIN_ID } from '../pluginId';
 import { ConversationSidebar } from './ConversationSidebar';
 import { MemoryPanel } from './MemoryPanel';
+import { ToolSourcePicker } from './ToolSourcePicker';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 
@@ -83,9 +85,11 @@ export function Chat() {
     removeConversation,
   } = useConversations();
   const { memories, removeMemory, refresh: refreshMemories } = useMemories();
+  const { sources, enabledSources, enabledToolSources, toggleSource } = useToolSources();
   const { messages, sendMessage, isLoading, error } = useChat({
     initialMessages,
     conversationId: activeId,
+    enabledToolSources,
   });
 
   // Auto-save when assistant response completes (isLoading transitions true -> false)
@@ -156,6 +160,11 @@ export function Chat() {
               <line x1="8" y1="2" x2="8" y2="12" />
             </svg>
           </ToggleSidebarBtn>
+          <ToolSourcePicker
+            sources={sources}
+            enabledSources={enabledSources}
+            onToggle={toggleSource}
+          />
           <div style={{ flex: 1 }} />
           <ToggleSidebarBtn
             onClick={() => setMemoryPanelOpen((prev) => !prev)}

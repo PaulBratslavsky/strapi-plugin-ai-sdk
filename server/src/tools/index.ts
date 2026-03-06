@@ -12,8 +12,20 @@ export function createTools(strapi: Core.Strapi, context?: ToolContext): ToolSet
     throw new Error('Tool registry not initialized');
   }
 
+  const enabledSources = context?.enabledToolSources;
   const tools: ToolSet = {};
+
   for (const [name, def] of registry.getAll()) {
+    // If enabledToolSources is provided, filter plugin tools by prefix
+    if (enabledSources) {
+      const sepIndex = name.indexOf('__');
+      if (sepIndex !== -1) {
+        const prefix = name.substring(0, sepIndex);
+        if (!enabledSources.includes(prefix)) continue;
+      }
+      // Built-in tools (no __) are always included
+    }
+
     tools[name] = tool({
       description: def.description,
       inputSchema: zodSchema(def.schema) as any,

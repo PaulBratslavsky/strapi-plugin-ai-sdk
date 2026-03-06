@@ -3,6 +3,7 @@ import type { z } from 'zod';
 
 export interface ToolContext {
   adminUserId?: number;
+  enabledToolSources?: string[];
 }
 
 export interface ToolDefinition {
@@ -52,6 +53,33 @@ export class ToolRegistry {
       }
     }
     return result;
+  }
+
+  /** Returns metadata about tool sources grouped by plugin prefix */
+  getToolSources(): Array<{ id: string; label: string; toolCount: number; tools: string[] }> {
+    const groups = new Map<string, string[]>();
+
+    for (const name of this.tools.keys()) {
+      const sepIndex = name.indexOf('__');
+      if (sepIndex === -1) {
+        // Built-in tool
+        const list = groups.get('built-in') ?? [];
+        list.push(name);
+        groups.set('built-in', list);
+      } else {
+        const prefix = name.substring(0, sepIndex);
+        const list = groups.get(prefix) ?? [];
+        list.push(name);
+        groups.set(prefix, list);
+      }
+    }
+
+    return Array.from(groups.entries()).map(([id, tools]) => ({
+      id,
+      label: id === 'built-in' ? 'Built-in Tools' : id,
+      toolCount: tools.length,
+      tools,
+    }));
   }
 
   /** Only tools marked safe for unauthenticated public chat */

@@ -3,6 +3,7 @@ import type { Context } from 'koa';
 import { Readable } from 'node:stream';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { PluginInstance } from '../lib/types';
 import { getService, validateBody, validateChatBody, createSSEStream, writeSSE } from '../lib/utils';
 
 const PLUGIN_ID = 'ai-sdk';
@@ -64,7 +65,11 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     if (!service) return;
 
     const adminUserId = ctx.state?.user?.id;
-    const result = await service.chat(body.messages, { system: body.system, adminUserId });
+    const result = await service.chat(body.messages, {
+      system: body.system,
+      adminUserId,
+      enabledToolSources: body.enabledToolSources,
+    });
 
     // Get the response using toUIMessageStreamResponse
     const response = result.toUIMessageStreamResponse();
@@ -103,6 +108,18 @@ const controller = ({ strapi }: { strapi: Core.Strapi }) => ({
     ctx.set('x-vercel-ai-ui-message-stream', 'v1');
 
     ctx.body = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
+  },
+
+  async getToolSources(ctx: Context) {
+    const plugin = strapi.plugin('ai-sdk') as unknown as PluginInstance;
+    const registry = plugin.toolRegistry;
+
+    if (!registry) {
+      ctx.badRequest('Tool registry not initialized');
+      return;
+    }
+
+    ctx.body = { data: registry.getToolSources() };
   },
 
   async serveWidget(ctx: Context) {

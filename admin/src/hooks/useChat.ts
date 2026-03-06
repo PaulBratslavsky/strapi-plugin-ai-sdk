@@ -31,15 +31,18 @@ function toUIMessages(messages: Message[]) {
   }));
 }
 
-async function fetchChatStream(messages: Message[]): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+async function fetchChatStream(messages: Message[], enabledToolSources?: string[]): Promise<ReadableStreamDefaultReader<Uint8Array>> {
   const token = getToken();
+  const body: Record<string, unknown> = { messages: toUIMessages(messages) };
+  if (enabledToolSources) body.enabledToolSources = enabledToolSources;
+
   const response = await fetch(`${getBackendURL()}/${PLUGIN_ID}/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ messages: toUIMessages(messages) }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
@@ -77,6 +80,7 @@ export interface UseChatOptions {
   initialMessages?: Message[];
   conversationId?: string | null;
   onStreamStart?: () => void;
+  enabledToolSources?: string[];
 }
 
 export function useChat(options?: UseChatOptions) {
@@ -103,7 +107,7 @@ export function useChat(options?: UseChatOptions) {
       setError(null);
 
       try {
-        const reader = await fetchChatStream([...messages, userMessage]);
+        const reader = await fetchChatStream([...messages, userMessage], options?.enabledToolSources);
 
         let streamStarted = false;
         const result = await readSSEStream(reader, {

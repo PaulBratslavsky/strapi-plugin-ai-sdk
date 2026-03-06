@@ -82,7 +82,7 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
      * Chat with messages - returns raw stream for UI message stream response
      * Compatible with AI SDK UI hooks (useChat)
      */
-    async chat(messages: UIMessage[], options?: { system?: string; adminUserId?: number }): Promise<StreamTextRawResult> {
+    async chat(messages: UIMessage[], options?: { system?: string; adminUserId?: number; enabledToolSources?: string[] }): Promise<StreamTextRawResult> {
       const config = strapi.config.get<PluginConfig>('plugin::ai-sdk');
       const maxMessages = config?.maxConversationMessages ?? DEFAULT_MAX_CONVERSATION_MESSAGES;
       const maxOutputTokens = config?.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
@@ -94,7 +94,7 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
         : messages;
 
       const modelMessages = await convertToModelMessages(trimmedMessages);
-      const tools = createTools(strapi, { adminUserId: options?.adminUserId });
+      const tools = createTools(strapi, { adminUserId: options?.adminUserId, enabledToolSources: options?.enabledToolSources });
       const toolsDescription = describeTools(tools);
       let system = composeSystemPrompt(config, toolsDescription, options?.system);
 

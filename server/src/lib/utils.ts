@@ -39,8 +39,12 @@ export function validateBody(ctx: Context): { prompt: string; system?: string } 
 /**
  * Validate request body for message-based chat requests
  */
-export function validateChatBody(ctx: Context): { messages: UIMessage[]; system?: string } | null {
-  const { messages, system } = ctx.request.body as { messages?: UIMessage[]; system?: string };
+export function validateChatBody(ctx: Context): { messages: UIMessage[]; system?: string; enabledToolSources?: string[] } | null {
+  const { messages, system, enabledToolSources } = ctx.request.body as {
+    messages?: UIMessage[];
+    system?: string;
+    enabledToolSources?: string[];
+  };
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     ctx.badRequest('messages is required and must be a non-empty array');
@@ -52,7 +56,12 @@ export function validateChatBody(ctx: Context): { messages: UIMessage[]; system?
     return null;
   }
 
-  return { messages, system };
+  if (enabledToolSources !== undefined && (!Array.isArray(enabledToolSources) || !enabledToolSources.every((s) => typeof s === 'string'))) {
+    ctx.badRequest('enabledToolSources must be an array of strings if provided');
+    return null;
+  }
+
+  return { messages, system, enabledToolSources };
 }
 
 /**
