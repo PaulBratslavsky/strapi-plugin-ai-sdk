@@ -15,7 +15,7 @@ export const uploadMediaSchema = z.object({
 });
 
 export const uploadMediaDescription =
-  'Upload a media file from a URL to the Strapi media library. Returns the uploaded file data. To link media to a content type field, use writeContent with the file ID.';
+  'Upload a media file from a URL to the Strapi media library. Returns the uploaded file data. To link media to a content type field, use createContent or updateContent with the file ID.';
 
 export interface UploadMediaParams {
   url: string;
@@ -133,6 +133,6 @@ export async function uploadMedia(
   return {
     file: uploadedFile,
     message: `File "${uploadedFile.name}" uploaded successfully (ID: ${uploadedFile.id}).`,
-    usage: `To link this file to a content type field, use writeContent with: { "fieldName": ${uploadedFile.id} }`,
+    usage: `To link this file to a content type field, use createContent or updateContent with: { "fieldName": ${uploadedFile.id} }`,
   };
 }

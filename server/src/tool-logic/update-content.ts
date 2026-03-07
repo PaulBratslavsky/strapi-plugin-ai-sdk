@@ -1,17 +1,13 @@
 import type { Core } from '@strapi/strapi';
 import { z } from 'zod';
 
-export const writeContentSchema = z.object({
+export const updateContentSchema = z.object({
   contentType: z
     .string()
     .describe('Content type UID, e.g. "api::article.article"'),
-  action: z
-    .enum(['create', 'update'])
-    .describe('Whether to create a new document or update an existing one'),
   documentId: z
     .string()
-    .optional()
-    .describe('Required for update — the document ID to update'),
+    .describe('The document ID to update'),
   data: z
     .record(z.string(), z.unknown())
     .describe('The field values to set. Must match the content type schema.'),
@@ -25,56 +21,41 @@ export const writeContentSchema = z.object({
     .describe('Locale code for i18n content, e.g. "en" or "fr"'),
 });
 
-export const writeContentDescription =
-  'Create or update a document in any Strapi content type. Use listContentTypes first to discover the schema, and searchContent to find existing documents for updates.';
+export const updateContentDescription =
+  'Update an existing document in any Strapi content type. Use searchContent to find the document ID first.';
 
-export interface WriteContentParams {
+export interface UpdateContentParams {
   contentType: string;
-  action: 'create' | 'update';
-  documentId?: string;
+  documentId: string;
   data: Record<string, unknown>;
   status?: 'draft' | 'published';
   locale?: string;
 }
 
-export interface WriteContentResult {
-  action: 'create' | 'update';
+export interface UpdateContentResult {
+  action: 'update';
   document: any;
 }
 
 /**
- * Core logic for creating/updating content.
+ * Core logic for updating content.
  * Shared between AI SDK tool and MCP tool.
  */
-export async function writeContent(
+export async function updateContent(
   strapi: Core.Strapi,
-  params: WriteContentParams
-): Promise<WriteContentResult> {
-  const { contentType, action, documentId, data, status, locale } = params;
+  params: UpdateContentParams
+): Promise<UpdateContentResult> {
+  const { contentType, documentId, data, status, locale } = params;
 
   if (!strapi.contentTypes[contentType as keyof typeof strapi.contentTypes]) {
     throw new Error(`Content type "${contentType}" does not exist.`);
   }
 
-  if (action === 'update' && !documentId) {
-    throw new Error('documentId is required for update actions.');
-  }
-
   const docs = strapi.documents(contentType as any);
-
-  if (action === 'create') {
-    const document = await docs.create({
-      data,
-      ...(status ? { status } : {}),
-      ...(locale ? { locale } : {}),
-      populate: '*',
-    } as any);
-    return { action: 'create', document };
-  }
 
   // Verify document exists before updating
   const existing = await docs.findOne({
-    documentId: documentId!,
+    documentId,
     ...(locale ? { locale } : {}),
   } as any);
 
@@ -85,11 +66,12 @@ export async function writeContent(
   }
 
   const document = await docs.update({
-    documentId: documentId,
+    documentId,
     data,
     ...(status ? { status } : {}),
     ...(locale ? { locale } : {}),
     populate: '*',
   } as any);
+
   return { action: 'update', document };
 }

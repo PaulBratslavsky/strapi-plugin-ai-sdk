@@ -1,7 +1,8 @@
 import type { ToolDefinition } from '../../lib/tool-registry';
 import { listContentTypesTool } from './list-content-types';
 import { searchContentTool } from './search-content';
-import { writeContentTool } from './write-content';
+import { createContentTool } from './create-content';
+import { updateContentTool } from './update-content';
 import { sendEmailTool } from './send-email';
 import { saveMemoryTool } from './save-memory';
 import { recallMemoriesTool } from './recall-memories';
@@ -15,7 +16,8 @@ import { manageTaskTool } from './manage-task';
 export const builtInTools: ToolDefinition[] = [
   listContentTypesTool,
   searchContentTool,
-  writeContentTool,
+  createContentTool,
+  updateContentTool,
   findOneContentTool,
   uploadMediaTool,
   sendEmailTool,

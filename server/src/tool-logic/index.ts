@@ -4,8 +4,11 @@ export type { ContentTypeSummary, ComponentSummary, RelationSummary, ListContent
 export { searchContent, searchContentSchema, searchContentDescription } from './search-content';
 export type { SearchContentParams, SearchContentResult } from './search-content';
 
-export { writeContent, writeContentSchema, writeContentDescription } from './write-content';
-export type { WriteContentParams, WriteContentResult } from './write-content';
+export { createContent, createContentSchema, createContentDescription } from './create-content';
+export type { CreateContentParams, CreateContentResult } from './create-content';
+
+export { updateContent, updateContentSchema, updateContentDescription } from './update-content';
+export type { UpdateContentParams, UpdateContentResult } from './update-content';
 
 export { sendEmail, sendEmailSchema, sendEmailDescription } from './send-email';
 export type { SendEmailParams, SendEmailResult } from './send-email';

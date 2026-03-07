@@ -49,7 +49,7 @@ function extractContentLinks(toolCall: ToolCall): ContentLink[] {
     return links;
   }
 
-  if (toolCall.toolName === 'writeContent') {
+  if (toolCall.toolName === 'createContent' || toolCall.toolName === 'updateContent') {
     const doc = output.document as Record<string, unknown> | undefined;
     const docId = doc?.documentId as string | undefined;
     if (docId) {
@@ -57,7 +57,7 @@ function extractContentLinks(toolCall: ToolCall): ContentLink[] {
         (doc?.title as string) || (doc?.name as string) || docId;
       return [
         {
-          label: `${input.action === 'create' ? 'Created' : 'Updated'}: ${title}`,
+          label: `${toolCall.toolName === 'createContent' ? 'Created' : 'Updated'}: ${title}`,
           to: buildContentManagerUrl(contentType, docId),
         },
       ];
