@@ -5,10 +5,12 @@ import styled from 'styled-components';
 import { useChat } from '../hooks/useChat';
 import { useConversations } from '../hooks/useConversations';
 import { useMemories } from '../hooks/useMemories';
+import { useNotes } from '../hooks/useNotes';
 import { useToolSources } from '../hooks/useToolSources';
 import { PLUGIN_ID } from '../pluginId';
 import { ConversationSidebar } from './ConversationSidebar';
 import { MemoryPanel } from './MemoryPanel';
+import { NotePanel } from './NotePanel';
 import { ToolSourcePicker } from './ToolSourcePicker';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
@@ -73,6 +75,7 @@ export function Chat() {
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
+  const [notePanelOpen, setNotePanelOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevIsLoadingRef = useRef(false);
   const {
@@ -85,6 +88,7 @@ export function Chat() {
     removeConversation,
   } = useConversations();
   const { memories, removeMemory, refresh: refreshMemories } = useMemories();
+  const { notes, removeNote, editNote, refresh: refreshNotes } = useNotes();
   const { sources, enabledSources, enabledToolSources, toggleSource } = useToolSources();
   const { messages, sendMessage, isLoading, error } = useChat({
     initialMessages,
@@ -97,9 +101,10 @@ export function Chat() {
     if (prevIsLoadingRef.current && !isLoading && messages.length > 0) {
       saveMessages(messages);
       refreshMemories();
+      refreshNotes();
     }
     prevIsLoadingRef.current = isLoading;
-  }, [isLoading, messages, saveMessages, refreshMemories]);
+  }, [isLoading, messages, saveMessages, refreshMemories, refreshNotes]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -141,6 +146,16 @@ export function Chat() {
             </svg>
           </ToggleSidebarBtn>
           <ToggleSidebarBtn
+            onClick={() => navigate(`/plugins/${PLUGIN_ID}/note-store`)}
+            aria-label="Research Notes"
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M4 2v12h8V5l-3-3H4z" />
+              <path d="M9 2v3h3" />
+              <path d="M6 8h4M6 10.5h4" />
+            </svg>
+          </ToggleSidebarBtn>
+          <ToggleSidebarBtn
             onClick={() => navigate(`/plugins/${PLUGIN_ID}/public-memory-store`)}
             aria-label="Public Memory Store"
           >
@@ -166,6 +181,16 @@ export function Chat() {
             onToggle={toggleSource}
           />
           <div style={{ flex: 1 }} />
+          <ToggleSidebarBtn
+            onClick={() => setNotePanelOpen((prev) => !prev)}
+            aria-label={notePanelOpen ? 'Hide notes' : 'Show notes'}
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M4 2v12h8V5l-3-3H4z" />
+              <path d="M9 2v3h3" />
+              <path d="M6 8h4M6 10.5h4" />
+            </svg>
+          </ToggleSidebarBtn>
           <ToggleSidebarBtn
             onClick={() => setMemoryPanelOpen((prev) => !prev)}
             aria-label={memoryPanelOpen ? 'Hide memories' : 'Show memories'}
@@ -195,6 +220,12 @@ export function Chat() {
           onSend={handleSend}
         />
       </ChatWrapper>
+      <NotePanel
+        notes={notes}
+        open={notePanelOpen}
+        onDelete={removeNote}
+        onEdit={editNote}
+      />
       <MemoryPanel
         memories={memories}
         open={memoryPanelOpen}

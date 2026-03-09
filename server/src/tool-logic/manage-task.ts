@@ -21,7 +21,7 @@ export const manageTaskSchema = z.object({
 });
 
 export const manageTaskDescription =
-  'Manage the user\'s task list. Create, update, complete, list, or summarize tasks. Tasks are scored by consequence × impact to help prioritize what matters most.';
+  'Manage the user\'s task list. Actions: create (new task), update (modify fields), complete (mark done), list (open tasks sorted by priority score), summary (overview with overdue/urgent counts). Tasks are scored by consequence × impact to prioritize what matters most. For create: title is required; consequence and impact are collected via UI form if omitted.';
 
 export type ManageTaskParams = z.infer<typeof manageTaskSchema>;
 

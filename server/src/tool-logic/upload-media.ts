@@ -15,7 +15,7 @@ export const uploadMediaSchema = z.object({
 });
 
 export const uploadMediaDescription =
-  'Upload a media file from a URL to the Strapi media library. Returns the uploaded file data. To link media to a content type field, use createContent or updateContent with the file ID.';
+  'Upload a media file from a URL to the Strapi media library. This is step 1 of a two-step process: (1) upload the file with this tool to get a file ID, then (2) link it to a content entry using createContent or updateContent with { fieldName: fileId }. Requires url. Optional: name, caption, alternativeText.';
 
 export interface UploadMediaParams {
   url: string;

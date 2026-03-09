@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const listContentTypesSchema = z.object({});
 
 export const listContentTypesDescription =
-  'List all Strapi content types and components with their fields, relations, and structure.';
+  'List all Strapi content types and components with their fields, relations, and structure. This is the starting point for any content operation — call it first to discover content type UIDs (e.g. "api::article.article"), field names, relation targets, and components. No parameters required. Results are cached.';
 
 export interface RelationSummary {
   field: string;

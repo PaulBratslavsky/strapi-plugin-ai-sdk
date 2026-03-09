@@ -4,6 +4,7 @@ import { Routes, Route } from 'react-router-dom';
 import { HomePage } from './HomePage';
 import { MemoryStorePage } from './MemoryStorePage';
 import { PublicMemoryStorePage } from './PublicMemoryStorePage';
+import { NoteStorePage } from './NoteStorePage';
 import { WidgetPreviewPage } from './WidgetPreviewPage';
 
 const App = () => {
@@ -12,6 +13,7 @@ const App = () => {
       <Route index element={<HomePage />} />
       <Route path="memory-store" element={<MemoryStorePage />} />
       <Route path="public-memory-store" element={<PublicMemoryStorePage />} />
+      <Route path="note-store" element={<NoteStorePage />} />
       <Route path="widget-preview" element={<WidgetPreviewPage />} />
       <Route path="*" element={<Page.Error />} />
     </Routes>

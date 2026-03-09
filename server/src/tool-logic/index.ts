@@ -34,5 +34,11 @@ export type { AggregateContentParams, AggregateContentResult } from './aggregate
 export { manageTask, manageTaskSchema, manageTaskDescription } from './manage-task';
 export type { ManageTaskParams, ManageTaskResult } from './manage-task';
 
+export { saveNote, saveNoteSchema, saveNoteDescription } from './save-note';
+export type { SaveNoteParams, SaveNoteResult } from './save-note';
+
+export { recallNotes, recallNotesSchema, recallNotesDescription } from './recall-notes';
+export type { RecallNotesParams, RecallNotesResult } from './recall-notes';
+
 export { resolveFieldPath, getDisplayField, isRelation, getRelationTarget, getSchema } from './schema-utils';
 export type { ResolvedField } from './schema-utils';

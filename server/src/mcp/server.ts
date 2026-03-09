@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { PluginInstance } from '../lib/types';
+import { generateToolGuide } from './resources/tool-guide';
 
 /** Convert camelCase to snake_case for MCP tool names, handling namespaced names (colons and hyphens) */
 function toSnakeCase(str: string): string {
@@ -30,6 +31,7 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
     {
       capabilities: {
         tools: {},
+        resources: {},
       },
     }
   );
@@ -60,6 +62,26 @@ export function createMcpServer(strapi: Core.Strapi): McpServer {
       }
     );
   }
+
+  // Register the tool guide as a static resource
+  const guideMarkdown = generateToolGuide(registry);
+  server.registerResource(
+    'Tool Guide',
+    'strapi://tools/guide',
+    {
+      description: 'Complete guide to all available Strapi AI tools with parameters and usage examples',
+      mimeType: 'text/markdown',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'strapi://tools/guide',
+          mimeType: 'text/markdown',
+          text: guideMarkdown,
+        },
+      ],
+    })
+  );
 
   strapi.log.info('[ai-sdk:mcp] MCP server created with tools:', { tools: toolNames });
 

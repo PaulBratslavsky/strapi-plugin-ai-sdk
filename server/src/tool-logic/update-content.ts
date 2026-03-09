@@ -22,7 +22,7 @@ export const updateContentSchema = z.object({
 });
 
 export const updateContentDescription =
-  'Update an existing document in any Strapi content type. Use searchContent to find the document ID first.';
+  'Update an existing document in any Strapi content type. Requires contentType, documentId, and data (fields to change — only include fields you want to modify). Typical workflow: searchContent to find the documentId, then updateContent to modify it. Returns the updated document.';
 
 export interface UpdateContentParams {
   contentType: string;

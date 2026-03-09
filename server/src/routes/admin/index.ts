@@ -118,5 +118,35 @@ export default {
       handler: 'task.delete',
       config: { policies: [] },
     },
+    {
+      method: 'GET',
+      path: '/notes',
+      handler: 'note.find',
+      config: { policies: [] },
+    },
+    {
+      method: 'POST',
+      path: '/notes',
+      handler: 'note.create',
+      config: { policies: [] },
+    },
+    {
+      method: 'PUT',
+      path: '/notes/:id',
+      handler: 'note.update',
+      config: { policies: [] },
+    },
+    {
+      method: 'DELETE',
+      path: '/notes/clear',
+      handler: 'note.clearAll',
+      config: { policies: [] },
+    },
+    {
+      method: 'DELETE',
+      path: '/notes/:id',
+      handler: 'note.delete',
+      config: { policies: [] },
+    },
   ],
 };

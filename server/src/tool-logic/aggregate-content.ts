@@ -52,7 +52,7 @@ export const aggregateContentSchema = z.object({
 });
 
 export const aggregateContentDescription =
-  'Aggregate and count content entries. Use for analytics questions like "how many articles per category", "content trends by month", or total counts with filters. Prefer this over searchContent for counting and grouping.';
+  'Count and group content entries for analytics. Answers questions like "how many articles?", "posts per category", "content published by month". Three operations: count (total), countByField (group by a field), countByDateRange (bucket by day/week/month). Prefer this over searchContent when you need counts or distributions, not the documents themselves.';
 
 export interface AggregateContentParams {
   contentType: string;

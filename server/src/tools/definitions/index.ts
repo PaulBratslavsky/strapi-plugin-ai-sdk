@@ -11,6 +11,8 @@ import { findOneContentTool } from './find-one-content';
 import { uploadMediaTool } from './upload-media';
 import { aggregateContentTool } from './aggregate-content';
 import { manageTaskTool } from './manage-task';
+import { saveNoteTool } from './save-note';
+import { recallNotesTool } from './recall-notes';
 
 /** All built-in tool definitions. Add new tools here. */
 export const builtInTools: ToolDefinition[] = [
@@ -26,4 +28,6 @@ export const builtInTools: ToolDefinition[] = [
   recallPublicMemoriesTool,
   aggregateContentTool,
   manageTaskTool,
+  saveNoteTool,
+  recallNotesTool,
 ];

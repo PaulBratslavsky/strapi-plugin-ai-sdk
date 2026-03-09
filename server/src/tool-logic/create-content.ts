@@ -19,7 +19,7 @@ export const createContentSchema = z.object({
 });
 
 export const createContentDescription =
-  'Create a new document in any Strapi content type (articles, blog posts, pages, etc.). Use listContentTypes first to discover available content types and their fields.';
+  'Create a new document in any Strapi content type. Requires contentType (UID) and data (field values). Call listContentTypes first to discover UIDs and required fields. To attach media, upload it first with uploadMedia, then pass the file ID in data. Returns the created document with all fields populated.';
 
 export interface CreateContentParams {
   contentType: string;

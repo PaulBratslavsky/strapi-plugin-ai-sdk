@@ -1,10 +1,10 @@
 {
   "kind": "collectionType",
-  "collectionName": "ai_sdk_memories",
+  "collectionName": "ai_sdk_notes",
   "info": {
-    "singularName": "memory",
-    "pluralName": "memories",
-    "displayName": "AI Memory"
+    "singularName": "note",
+    "pluralName": "notes",
+    "displayName": "AI Note"
   },
   "options": { "draftAndPublish": false },
   "pluginOptions": {
@@ -12,8 +12,11 @@
     "content-type-builder": { "visible": false }
   },
   "attributes": {
+    "title": { "type": "string" },
     "content": { "type": "richtext", "required": true },
-    "category": { "type": "enumeration", "enum": ["general", "preference", "personal", "project"], "default": "general" },
+    "category": { "type": "enumeration", "enum": ["research", "snippet", "idea", "reference"], "default": "research" },
+    "tags": { "type": "text" },
+    "source": { "type": "string" },
     "adminUserId": { "type": "integer", "required": true }
   }
 }

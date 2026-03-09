@@ -30,7 +30,7 @@ export const findOneContentSchema = z.object({
 });
 
 export const findOneContentDescription =
-  'Fetch a single document by its documentId from any Strapi content type. Returns the full document with all fields and populated relations. Use searchContent first to discover document IDs.';
+  'Fetch a single document by its exact documentId. Use this when you already have a documentId and need full details with populated relations. If you need to find documents by title, field values, or full-text search, use searchContent instead. Requires contentType and documentId.';
 
 export interface FindOneContentParams {
   contentType: string;
