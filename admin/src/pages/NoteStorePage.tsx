@@ -145,7 +145,7 @@ function NoteModal({ note, open, onClose, onSave }: NoteModalProps) {
                 placeholder="Note content (supports markdown)"
                 value={content}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
-                style={{ width: '100%', minHeight: '160px', fontFamily: 'monospace' }}
+                style={{ width: '100%', minHeight: '160px', maxHeight: '300px', overflow: 'auto', fontFamily: 'monospace' }}
               />
             </Field.Root>
             <Flex gap={4} width="100%">
