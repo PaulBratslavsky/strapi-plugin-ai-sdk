@@ -12,6 +12,7 @@ import {
   DEFAULT_PUBLIC_CHAT_MODEL,
 } from '../lib/types';
 import { createTools, createPublicTools, describeTools } from '../tools';
+import { trimMessages } from '../lib/trim-messages';
 
 const DEFAULT_PREAMBLE =
   `You are a Strapi CMS assistant. Use your tools to fulfill user requests. When asked to create or update content, use the appropriate tool — do not tell the user you cannot. When performing bulk operations (e.g. publish multiple items), call multiple tools in parallel in a single step rather than one at a time.
@@ -88,10 +89,8 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
       const maxOutputTokens = config?.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
       const maxSteps = config?.maxSteps ?? DEFAULT_MAX_STEPS;
 
-      // Truncate conversation history to limit input tokens
-      const trimmedMessages = messages.length > maxMessages
-        ? messages.slice(-maxMessages)
-        : messages;
+      // Truncate conversation history while keeping tool call/result pairs intact
+      const trimmedMessages = trimMessages(messages, maxMessages);
 
       const modelMessages = await convertToModelMessages(trimmedMessages);
       const tools = createTools(strapi, { adminUserId: options?.adminUserId, enabledToolSources: options?.enabledToolSources });
@@ -139,9 +138,7 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => {
       const allowedContentTypes = publicConfig?.allowedContentTypes ?? [];
       const publicToolSources = publicConfig?.publicToolSources;
 
-      const trimmedMessages = messages.length > maxMessages
-        ? messages.slice(-maxMessages)
-        : messages;
+      const trimmedMessages = trimMessages(messages, maxMessages);
 
       const modelMessages = await convertToModelMessages(trimmedMessages);
       const tools = createPublicTools(strapi, allowedContentTypes, publicToolSources);
